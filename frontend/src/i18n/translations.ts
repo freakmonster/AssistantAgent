@@ -30,7 +30,7 @@ const zh = {
       search: { title: '联网搜索', desc: '实时搜索最新信息与新闻' },
       media: { title: '图片/视频生成', desc: '一句话生成图片与视频' },
       map: { title: '地图服务', desc: '地理编码、天气、路径与周边' },
-      code: { title: '编程与竞赛', desc: 'LeetCode 题目、题解与用户信息' },
+      code: { title: '编程与竞赛', desc: 'LeetCode 题目、题解' },
     },
   },
   chat: {
