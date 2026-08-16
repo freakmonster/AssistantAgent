@@ -7,12 +7,15 @@ todo: 后续可在提交步骤加 429 限流重试/退避（如 tenacity），�
 import asyncio
 import logging
 import uuid
+from datetime import datetime, timezone
 
 import httpx
+from sqlalchemy import select
 
 from app.core.config import settings
 from app.models.database import async_session_factory
 from app.models.message import Message
+from app.models.session import Session
 # 转存功能已注释停用（直接返回临时 URL）；如需恢复请取消此导入
 # from app.services.media_storage import media_storage
 
@@ -118,8 +121,16 @@ async def generate_video_task(ctx, user_id: str, session_id: str, prompt: str) -
 
 
 async def _save_task_result(session_id: str, result: dict) -> None:
-    """将视频结果写入 messages 表（role=assistant，attachments 存媒体 URL）。"""
+    """将视频结果写入 messages 表（role=assistant，attachments 存媒体 URL）。
+
+    同时刷新对应会话的 updated_at，保证完成任务的会话能在列表排到最前。
+    """
     async with async_session_factory() as session:
+        db_session = await session.scalar(
+            select(Session).where(Session.id == uuid.UUID(session_id))
+        )
+        if db_session is not None:
+            db_session.updated_at = datetime.now(timezone.utc)
         session.add(
             Message(
                 session_id=uuid.UUID(session_id),

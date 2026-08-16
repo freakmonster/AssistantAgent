@@ -4,6 +4,7 @@
 """
 import asyncio
 import json
+from datetime import datetime, timezone
 from typing import Any, AsyncGenerator
 
 from sqlalchemy import select
@@ -109,6 +110,10 @@ class AgentService:
             # 会话自动命名：标题仍为默认值（未命名/新对话）时，用首条用户消息截取生成
             if db_session.title in (None, "", "新对话"):
                 db_session.title = self._gen_session_title(user_message)
+
+            # 显式刷新会话更新时间：onupdate 只在 sessions 行被 UPDATE 时触发，
+            # 历史会话仅新增消息不触碰该行，会导致 updated_at 永远停留在创建时间
+            db_session.updated_at = datetime.now(timezone.utc)
 
             session.add(
                 Message(session_id=session_id, role="user", content=user_message)
