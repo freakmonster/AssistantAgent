@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react'
 import { useTaskPolling } from '../../hooks/useTaskPolling'
 import { useMessageStore } from '../../stores/messageStore'
+import { EmptyWelcome } from './EmptyWelcome'
 import { MessageBubble } from './MessageBubble'
 
 export function ChatArea() {
@@ -29,9 +30,7 @@ export function ChatArea() {
 
   return (
     <div className="chat-area" ref={containerRef} onScroll={handleScroll}>
-      {messages.length === 0 && (
-        <div className="chat-empty">开始一段新对话吧</div>
-      )}
+      {messages.length === 0 && <EmptyWelcome />}
       {messages.map((m) => (
         <MessageBubble key={m.id} message={m} streaming={streaming} />
       ))}

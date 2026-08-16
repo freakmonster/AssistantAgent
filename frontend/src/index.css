@@ -270,10 +270,74 @@ button {
   scrollbar-width: none; /* Firefox */
 }
 
-.chat-empty {
+/* 空对话欢迎区：logo + 自我介绍 + 四个功能方框 */
+.welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 158px 24px;
+}
+
+.welcome-logo {
+  width: 56px;
+  height: 56px;
+  margin-bottom: 20px;
+}
+
+.welcome-intro {
+  margin: 0 0 32px;
   text-align: center;
   color: var(--muted);
-  margin-top: 60px;
+  font-size: 15px;
+}
+
+/* 四个功能方框：四列网格，窄屏降列 */
+.welcome-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  width: 100%;
+  max-width: 880px;
+}
+
+/* 功能方框：白底黑边缘、平滑圆角 */
+.feature-card {
+  position: relative; /* 供左上角图标绝对定位 */
+  background: #fff;
+  border: 1px solid var(--text);
+  border-radius: 16px;
+  padding: 40px 16px 16px; /* 顶部留白给图标 */
+}
+
+.feature-icon {
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  display: flex;
+}
+
+.feature-title {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.feature-desc {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .welcome-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .welcome-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .message-bubble {
@@ -458,9 +522,9 @@ button {
   padding: 3px 264px 17px; /* 上 3px，左右 264px（134 + 130），下 3px */
 }
 
-/* 空会话窗口（无消息，存在 .chat-empty）：输入框整体上移 200px */
-.main-panel:has(.chat-empty) .chat-input {
-  margin-bottom: 150px;
+/* 空会话窗口（无消息，存在欢迎区 .welcome）：输入框整体上移 */
+.main-panel:has(.welcome) .chat-input {
+  padding: 3px 200px 187px; 
 }
 
 /* 输入框包裹容器：外轮廓 + 上下两部分布局（上半文字输入，下半固定 40px 工具栏） */
