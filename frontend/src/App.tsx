@@ -8,11 +8,13 @@ import { ChatInput } from './components/Chat/ChatInput'
 import { Sidebar } from './components/Sidebar/Sidebar'
 import { useMessageStore } from './stores/messageStore'
 import { useSessionStore } from './stores/sessionStore'
+import { useTranslation } from './stores/settingsStore'
 import { useUserStore } from './stores/userStore'
 
 export default function App() {
   const token = useUserStore((s) => s.token)
   const currentSessionId = useSessionStore((s) => s.currentSessionId)
+  const { t } = useTranslation()
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   // 侧边栏宽度（可拖拽调整），上下限分别限制
@@ -99,14 +101,14 @@ export default function App() {
       <button
         className="sidebar-expand-btn"
         onClick={() => setSidebarCollapsed(false)}
-        aria-label="展开侧边栏"
+        aria-label={t.sidebar.expand}
       >
         »
       </button>
       <button
         className="new-chat-float-btn"
         onClick={() => void handleNewChat()}
-        aria-label="新建对话"
+        aria-label={t.sidebar.newChat}
       >
         +
       </button>

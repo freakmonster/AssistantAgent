@@ -3,6 +3,7 @@ import { CopyOutlined } from '@ant-design/icons'
 import { useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { useTranslation } from '../../stores/settingsStore'
 import { useTaskStore } from '../../stores/taskStore'
 import type { ChatMessage } from '../../types'
 import { AttachmentCard } from '../tasks/AttachmentCard'
@@ -53,6 +54,7 @@ interface MessageBubbleProps {
 
 export function MessageBubble({ message, streaming }: MessageBubbleProps) {
   const isUser = message.role === 'user'
+  const { t } = useTranslation()
   // 关联的异步任务（type=task 时由 useSSE 写入 message.taskId）
   const task = useTaskStore((s) =>
     message.taskId ? s.tasks[message.taskId] : undefined,
@@ -100,7 +102,7 @@ export function MessageBubble({ message, streaming }: MessageBubbleProps) {
         ))}
         {task && <TaskCard task={task} />}
         {streaming && !message.content && !message.toolCalls && !message.attachments && (
-          <div className="message-typing">正在思考…</div>
+          <div className="message-typing">{t.chat.thinking}</div>
         )}
       </div>
       {/* 复制按钮：位于气泡之外，仅在有文本内容时显示 */}
@@ -108,10 +110,10 @@ export function MessageBubble({ message, streaming }: MessageBubbleProps) {
         <button
           className="message-copy-btn"
           onClick={() => void handleCopy()}
-          aria-label="复制"
+          aria-label={t.chat.copy}
         >
           <CopyOutlined />
-          <span>{copied ? '已复制' : '复制'}</span>
+          <span>{copied ? t.chat.copied : t.chat.copy}</span>
         </button>
       )}
     </div>

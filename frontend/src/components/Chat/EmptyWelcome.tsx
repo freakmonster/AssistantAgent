@@ -1,5 +1,6 @@
 // 空对话欢迎区：品牌 logo + 自我介绍 + 四个功能方框（左上角简笔画图标，各不同颜色）
 import type { ReactNode } from 'react'
+import { useTranslation } from '../../stores/settingsStore'
 
 interface Feature {
   title: string
@@ -8,11 +9,9 @@ interface Feature {
   icon: ReactNode
 }
 
-// 四个功能方框内容：图标为简笔画线条 SVG，颜色通过 color 注入
-const FEATURES: Feature[] = [
+// 四个功能方框内容：图标为简笔画线条 SVG，颜色通过 color 注入；标题与描述按语言翻译
+const FEATURE_ICONS: { color: string; icon: ReactNode }[] = [
   {
-    title: '联网搜索',
-    desc: '实时搜索最新信息与新闻',
     color: '#2563eb',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -22,8 +21,6 @@ const FEATURES: Feature[] = [
     ),
   },
   {
-    title: '图片/视频生成',
-    desc: '一句话生成图片与视频',
     color: '#9333ea',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -32,8 +29,6 @@ const FEATURES: Feature[] = [
     ),
   },
   {
-    title: '地图服务',
-    desc: '地理编码、天气、路径与周边',
     color: '#16a34a',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -43,8 +38,6 @@ const FEATURES: Feature[] = [
     ),
   },
   {
-    title: '编程与竞赛',
-    desc: 'LeetCode 题目、题解与用户信息',
     color: '#ea580c',
     icon: (
       <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -56,15 +49,27 @@ const FEATURES: Feature[] = [
 ]
 
 export function EmptyWelcome() {
+  const { t } = useTranslation()
+  const features: Feature[] = FEATURE_ICONS.map((f, i) => {
+    const labels = [
+      t.welcome.features.search,
+      t.welcome.features.media,
+      t.welcome.features.map,
+      t.welcome.features.code,
+    ]
+    return { ...f, title: labels[i].title, desc: labels[i].desc }
+  })
   return (
     <div className="welcome">
       <img className="welcome-logo" src="/favicon.svg" alt="Personal Assistant" />
       <p className="welcome-intro">
-        你好，我是超级个人综合型助手，能通过工具调用帮你完成各类任务。<br /><br />
-        你可以询问我“你有什么功能”，我会告诉你我提供的所有功能。
+        {t.welcome.intro1}
+        <br />
+        <br />
+        {t.welcome.intro2}
       </p>
       <div className="welcome-grid">
-        {FEATURES.map((f) => (
+        {features.map((f) => (
           <div className="feature-card" key={f.title}>
             <span className="feature-icon" style={{ color: f.color }}>
               {f.icon}

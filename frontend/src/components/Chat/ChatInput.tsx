@@ -3,6 +3,7 @@ import { useRef, useState, type ChangeEvent } from 'react'
 import { useSSE } from '../../hooks/useSSE'
 import { useMessageStore } from '../../stores/messageStore'
 import { useSessionStore } from '../../stores/sessionStore'
+import { useTranslation } from '../../stores/settingsStore'
 
 interface ChatInputProps {
   sessionId: string | null
@@ -22,6 +23,7 @@ export function ChatInput({ sessionId }: ChatInputProps) {
   const [text, setText] = useState('')
   const streaming = useMessageStore((s) => s.streaming)
   const ensureSession = useSessionStore((s) => s.ensureSession)
+  const { t } = useTranslation()
   const { sendMessage } = useSSE()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   // 防重入：ensureSession 异步创建会话期间，避免双击重复发送
@@ -70,7 +72,7 @@ export function ChatInput({ sessionId }: ChatInputProps) {
               handleSend()
             }
           }}
-          placeholder="畅所欲言"
+          placeholder={t.chat.inputPlaceholder}
           rows={1}
         />
         <div className="chat-input-toolbar">
@@ -79,7 +81,7 @@ export function ChatInput({ sessionId }: ChatInputProps) {
           <button
             onClick={handleSend}
             disabled={streaming || !text.trim()}
-            aria-label="发送"
+            aria-label={t.chat.send}
           >
             {streaming ? (
               <span className="chat-send-dots">…</span>

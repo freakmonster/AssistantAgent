@@ -1,5 +1,6 @@
 // 工具调用卡片：展示 Agent 调用的工具及其执行状态，支持收起/展开
 import { useEffect, useState } from 'react'
+import { useTranslation } from '../../stores/settingsStore'
 import type { ToolCall, ToolCallStatus } from '../../types'
 
 interface ToolCallCardProps {
@@ -13,13 +14,13 @@ const STATUS_ICON: Record<ToolCallStatus, string> = {
   failed: '❌',
 }
 
-const STATUS_TEXT: Record<ToolCallStatus, string> = {
-  running: '执行中',
-  success: '完成',
-  failed: '失败',
-}
-
 export function ToolCallCard({ toolCalls, status = 'running' }: ToolCallCardProps) {
+  const { t } = useTranslation()
+  const statusText: Record<ToolCallStatus, string> = {
+    running: t.tool.running,
+    success: t.tool.success,
+    failed: t.tool.failed,
+  }
   // 执行中默认展开展示参数；完成后默认收起为一行
   const [collapsed, setCollapsed] = useState(status !== 'running')
 
@@ -43,8 +44,10 @@ export function ToolCallCard({ toolCalls, status = 'running' }: ToolCallCardProp
           {collapsed ? '▸' : '▾'}
         </button>
         <span>{STATUS_ICON[status]}</span>
-        <span>调用 {toolCalls.map((c) => c.name).join('、')}</span>
-        <span className="tool-call-status">{STATUS_TEXT[status]}</span>
+        <span>
+          {t.tool.call} {toolCalls.map((c) => c.name).join('、')}
+        </span>
+        <span className="tool-call-status">{statusText[status]}</span>
       </div>
       {!collapsed &&
         toolCalls.map((call) => (

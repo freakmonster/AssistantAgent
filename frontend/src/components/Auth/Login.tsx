@@ -1,6 +1,7 @@
 // 登录表单
 import { useState } from 'react'
 import { authApi } from '../../services/api'
+import { useTranslation } from '../../stores/settingsStore'
 import { useUserStore } from '../../stores/userStore'
 
 interface LoginProps {
@@ -11,6 +12,7 @@ export function Login({ onSwitch }: LoginProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const { t } = useTranslation()
   const setAuth = useUserStore((s) => s.setAuth)
 
   const handleSubmit = async () => {
@@ -26,25 +28,25 @@ export function Login({ onSwitch }: LoginProps) {
   return (
     <div className="auth-page">
       <div className="auth-form">
-        <h2>登录</h2>
+        <h2>{t.auth.login}</h2>
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="邮箱"
+          placeholder={t.auth.email}
         />
         <input
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="密码"
+          placeholder={t.auth.password}
           onKeyDown={(e) => {
             if (e.key === 'Enter') void handleSubmit()
           }}
         />
         {error && <div className="auth-error">{error}</div>}
-        <button onClick={() => void handleSubmit()}>登录</button>
+        <button onClick={() => void handleSubmit()}>{t.auth.login}</button>
         <button className="link-btn" onClick={onSwitch}>
-          没有账号？注册
+          {t.auth.toRegister}
         </button>
       </div>
     </div>
