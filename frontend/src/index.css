@@ -1,0 +1,547 @@
+/* 全局样式：三栏布局、消息、工具卡片、任务卡片、认证表单 */
+
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg: #ffffff;
+  --panel: #e6ebf1d3;
+  --border: #e5e5e6;
+  --text: #1f1f1f;
+  --muted: #8e8e93;
+  --accent: #2b2b2b;
+  --user-bg: #9a9a9a2e;
+  --danger: #dc2626;
+  --success: #16a34a;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* 三栏布局 */
+.app-layout {
+  display: flex;
+  height: 100vh;
+  position: relative; /* 供左上角展开按钮定位 */
+}
+
+.main-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* 侧边栏 */
+.sidebar {
+  width: 260px;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 12px;
+}
+
+/* 侧边栏顶部行：品牌名靠左，收起按钮靠右上角 */
+.sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 24px;
+}
+
+/* 品牌名：渐变艺术字 */
+.sidebar-brand {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #4f46e5, #9333ea, #db2777);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+
+.sidebar-toggle-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.sidebar-toggle-btn:hover {
+  color: var(--text);
+  background: #f0f0f0;
+}
+
+/* 侧边栏收起后，页面左上角的展开按钮 */
+.sidebar-expand-btn {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 10;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.sidebar-expand-btn:hover {
+  background: #f0f0f0;
+}
+
+.new-chat-btn {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  font-weight: 500;
+}
+
+.new-chat-btn:hover {
+  background: #f0f0f0;
+}
+
+.session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* 侧边栏会话列表滚动条 */
+.session-list::-webkit-scrollbar {
+  width: 6px;              /* 滚动条宽度 */
+}
+
+.session-list::-webkit-scrollbar-track {
+  background: transparent; /* 轨道透明 */
+}
+
+.session-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2); /* 滑块：透明度 0.2，可改 */
+  border-radius: 3px;
+}
+
+.session-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.session-list li {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.session-list li:hover {
+  background: #f0f0f0;
+}
+
+.session-list li.active {
+  background: var(--user-bg);
+  color: var(--accent);
+}
+
+.sidebar-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sidebar-user {
+  font-size: 13px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.logout-btn {
+  border: none;
+  background: none;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+/* 聊天区 */
+.chat-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+/* 主聊天区滚动条：完全隐藏（保留滚轮/触控滚动，界面更干净） */
+.chat-area::-webkit-scrollbar {
+  display: none; /* Chrome/Edge/Safari */
+}
+
+.chat-area {
+  scrollbar-width: none; /* Firefox */
+}
+
+.chat-empty {
+  text-align: center;
+  color: var(--muted);
+  margin-top: 60px;
+}
+
+.message-bubble {
+  max-width: 720px;
+  margin: 0 0 16px; /* 去掉水平 auto，改为由子类控制左右对齐 */
+  padding: 12px 16px;
+  border-radius: 12px;
+}
+
+.message-user {
+  background: var(--user-bg);
+  margin-left: auto; /* 推向右：用户气泡靠右 */
+  width: fit-content; /* 宽度收缩到内容，去掉文字后的多余留白 */
+  margin-right: 80px;   /* 距右边缘 */
+}
+
+.message-assistant {
+  background: transparent; /* 助手气泡背景透明 */
+  border: none;
+  max-width: 1100px;
+  margin-right: 80px; 
+  margin-left: 80px;    /* 距左边缘 */
+}
+
+.message-content {
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.message-content pre {
+  background: #f5f5f5;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+.message-content code {
+  background: #f5f5f5;
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.message-content pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Markdown 表格（需 remark-gfm 支持） */
+.message-content table {
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 0.9em;
+  display: block;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.message-content th,
+.message-content td {
+  border: 1px solid var(--border);
+  padding: 6px 10px;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.message-content th {
+  background: var(--bg);
+  font-weight: 600;
+}
+
+.message-typing {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* 工具调用卡片 */
+.tool-call-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  background: #fafafa;
+}
+
+.tool-call-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+}
+
+/* 收起/展开切换按钮（▸/▾） */
+.tool-call-toggle {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 26px;
+  line-height: 1;
+  width: 26px;
+  text-align: center;
+}
+
+.tool-call-toggle:hover {
+  color: var(--text);
+}
+
+.tool-call-status {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tool-call-failed .tool-call-status {
+  color: var(--danger);
+}
+
+.tool-call-success .tool-call-status {
+  color: var(--success);
+}
+
+.tool-call-args {
+  margin-top: 6px;
+}
+
+.tool-call-args code {
+  font-size: 12px;
+  color: var(--muted);
+  word-break: break-all;
+}
+
+/* 任务卡片 */
+.task-card {
+  margin-top: 10px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.task-card img,
+.task-card video {
+  max-width: 100%;
+  border-radius: 8px;
+  display: block;
+}
+
+/* 静态附件卡片 */
+.attachment-card {
+  margin-top: 10px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.attachment-card img,
+.attachment-card video {
+  max-width: 100%;
+  border-radius: 8px;
+  display: block;
+}
+
+.task-list {
+  padding: 0 24px 12px;
+}
+
+/* 输入区 */
+.chat-input {
+  border-top: none;
+  background: transparent; /* 输入区背景透明 */
+  padding: 3px 134px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+/* 输入框包裹容器：外轮廓 + 上下两部分布局（上半文字输入，下半固定 40px 工具栏） */
+.chat-input-box {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border);
+  border-radius: 16px; /* 外轮廓保持不变 */
+  overflow: hidden; /* 裁剪，保证文字滚动条不越界到下半部分 */
+  background: var(--panel); /* 降低透明度：给输入框一个实色底，不再透出聊天区背景 */
+}
+
+.chat-input textarea {
+  width: 100%;
+  flex: none; /* 高度由 JS 动态控制（min/max 约束） */
+  resize: none;
+  border: none;
+  outline: none;
+  padding: 12px 16px;
+  min-height: 40px;
+  max-height: 240px; /* 最高 240px，超出后滚动条只在文字区（上半部分） */
+  overflow-y: auto;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.5;
+  color: #000000; /* 输入文字颜色 */
+}
+
+.chat-input textarea::placeholder {
+  color: #9ca3af; /* 占位提示文字更淡 */
+}
+
+/* 文字区滚动条：只在输入框上半部分出现 */
+.chat-input textarea::-webkit-scrollbar {
+  width: 6px; /* 滚动条宽度 */
+}
+
+.chat-input textarea::-webkit-scrollbar-thumb {
+  background: #c7c7c9; /* 滑块颜色 */
+  border-radius: 13px; /* 滑块圆角 */
+}
+
+.chat-input textarea::-webkit-scrollbar-thumb:hover {
+  background: #b2b2b3; /* 悬停加深 */
+}
+
+.chat-input textarea::-webkit-scrollbar-track {
+  background: transparent; /* 轨道透明 */
+}
+
+/* 注意：不要给 textarea 设置 scrollbar-width/scrollbar-color 标准属性，
+   Chrome 121+ 会优先采用它们并忽略上方的 ::-webkit-scrollbar 样式（宽度/颜色失效）。 */
+
+/* 下半部分工具栏：固定 40px，放置发送按钮与预留按钮 */
+.chat-input-toolbar {
+  flex: none;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 12px;
+  background: #ffffff; /* 工具栏背景色，与上半部分文字区区分 */
+}
+
+.chat-input button {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%; /* 圆形按钮 */
+  background: var(--accent);
+  color: #fff;
+  margin-right: 14px; /* 往左移动一点（相对原右边缘再缩进） */
+}
+
+.chat-input button .chat-send-dots {
+  font-size: 12px;
+  line-height: 1;
+}
+
+.chat-input button:disabled {
+  background: #898c9b;
+  cursor: not-allowed;
+}
+
+
+
+.no-session {
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+  padding: 16px 24px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* 认证页 */
+.auth-page {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+
+.auth-form {
+  width: 320px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-form h2 {
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.auth-form input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.auth-form button {
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 500;
+}
+
+.auth-form .link-btn {
+  background: none;
+  color: var(--accent);
+  font-weight: 400;
+}
+
+.auth-error {
+  color: var(--danger);
+  font-size: 13px;
+}

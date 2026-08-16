@@ -1,0 +1,81 @@
+# 超级个人综合型助手 项目级 .gitignore
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.tox/
+.venv/
+venv/
+env/
+ENV/
+
+# ---------- 密钥与环境配置 ----------
+# 真实密钥/URL 只存本地 .env，.env.example 保留占位符入库
+backend/.env
+.env
+.env.local
+.env.*.local
+
+# ---------- 前端 ----------
+node_modules/
+dist-ssr/
+.vite/
+*.local
+frontend/dist/
+frontend/.next/
+frontend/out/
+frontend/build/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------- 日志 ----------
+*.log
+logs/
+
+# ---------- 运行时产物 ----------
+# 上传/媒体/视频生成临时产物（对象存储落地后目录可删）
+uploads/
+media/
+backend/media/
+backend/uploads/
+*.mp4
+*.mp3
+*.wav
+
+# ---------- 本地数据库备份 ----------
+*.sql
+*.dump
+*.backup
+
+# ---------- IDE / 系统文件 ----------
+.idea/
+.vscode/
+*.suo
+*.user
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 测试与脚本 ----------
+backend/tests/
+backend/scripts/
+
+# ---------- Trae 本地配置 ----------
+.trae/
+
+# ---------- 根目录文档（预留 README.md，后续创建时保留入库） ----------
+/*.md
+!/README.md

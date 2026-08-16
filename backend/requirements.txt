@@ -1,0 +1,27 @@
+fastapi
+uvicorn
+python-dotenv
+pydantic-settings
+langgraph
+langchain-openai
+langgraph-checkpoint-postgres
+psycopg[binary]
+psycopg-pool
+langchain-mcp-adapters
+sqlalchemy
+python-jose[cryptography]
+bcrypt
+alembic
+arq
+tenacity
+pybreaker
+slowapi
+redis
+httpx
+
+# 可观测性（阶段 6）：OpenTelemetry 追踪 + structlog 结构化日志
+opentelemetry-api
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi
+opentelemetry-exporter-otlp-proto-http
+structlog

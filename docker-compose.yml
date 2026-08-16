@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  postgres:
+    # 使用 pgvector 镜像以支持后续长期记忆的向量检索
+    image: pgvector/pgvector:pg15
+    environment:
+      POSTGRES_USER: agent_user
+      POSTGRES_PASSWORD: secure_password
+      POSTGRES_DB: agent_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agent_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    # ARQ 异步任务 Worker（阶段 5），消费 run_agent_task 等长耗时任务
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: arq app.tasks.worker.WorkerSettings
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://redis:6379
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      replicas: 2  # 可横向扩展
+
+volumes:
+  pg_data:
