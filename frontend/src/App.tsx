@@ -12,8 +12,20 @@ import { useUserStore } from './stores/userStore'
 export default function App() {
   const token = useUserStore((s) => s.token)
   const currentSessionId = useSessionStore((s) => s.currentSessionId)
+  const createSession = useSessionStore((s) => s.createSession)
+  const setLastSessionId = useUserStore((s) => s.setLastSessionId)
+  const loadHistory = useMessageStore((s) => s.loadHistory)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  // 新建对话：复用侧边栏同款逻辑，供收起态下的「+」按钮使用
+  const handleNewChat = async () => {
+    const session = await createSession('新对话')
+    if (session) {
+      setLastSessionId(session.id)
+      void loadHistory(session.id)
+    }
+  }
 
   // 登录/刷新后恢复上次会话并加载历史消息
   useEffect(() => {
@@ -44,10 +56,8 @@ export default function App() {
   }
 
   return (
-    <div className="app-layout">
-      {!sidebarCollapsed && (
-        <Sidebar onCollapse={() => setSidebarCollapsed(true)} />
-      )}
+    <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <Sidebar onCollapse={() => setSidebarCollapsed(true)} />
       <main className="main-panel">
         <ChatArea />
         {currentSessionId ? (
@@ -56,15 +66,20 @@ export default function App() {
           <div className="no-session">请先选择或新建会话</div>
         )}
       </main>
-      {sidebarCollapsed && (
-        <button
-          className="sidebar-expand-btn"
-          onClick={() => setSidebarCollapsed(false)}
-          aria-label="展开侧边栏"
-        >
-          »
-        </button>
-      )}
+      <button
+        className="sidebar-expand-btn"
+        onClick={() => setSidebarCollapsed(false)}
+        aria-label="展开侧边栏"
+      >
+        »
+      </button>
+      <button
+        className="new-chat-float-btn"
+        onClick={() => void handleNewChat()}
+        aria-label="新建对话"
+      >
+        +
+      </button>
     </div>
   )
 }
