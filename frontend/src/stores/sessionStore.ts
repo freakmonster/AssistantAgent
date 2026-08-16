@@ -10,6 +10,9 @@ interface SessionState {
   fetchSessions: () => Promise<void>
   createSession: (title?: string) => Promise<Session | null>
   setCurrentSession: (id: string | null) => void
+  renameSession: (id: string, title: string) => Promise<void>
+  togglePin: (id: string) => Promise<void>
+  deleteSession: (id: string) => Promise<void>
   cleanupEmptySessions: () => Promise<void>
 }
 
@@ -47,6 +50,37 @@ export const useSessionStore = create<SessionState>((set, get) => ({
     }
   },
   setCurrentSession: (id) => set({ currentSessionId: id }),
+  renameSession: async (id, title) => {
+    try {
+      await sessionApi.rename(id, title)
+      set((state) => ({
+        sessions: state.sessions.map((s) => (s.id === id ? { ...s, title } : s)),
+      }))
+    } catch (e) {
+      console.error('重命名会话失败', e)
+    }
+  },
+  togglePin: async (id) => {
+    try {
+      await sessionApi.togglePin(id)
+      // 置顶会改变排序，重新拉取列表保证顺序正确
+      await get().fetchSessions()
+    } catch (e) {
+      console.error('切换置顶失败', e)
+    }
+  },
+  deleteSession: async (id) => {
+    try {
+      await sessionApi.delete(id)
+      set((state) => ({
+        sessions: state.sessions.filter((s) => s.id !== id),
+        currentSessionId:
+          state.currentSessionId === id ? null : state.currentSessionId,
+      }))
+    } catch (e) {
+      console.error('删除会话失败', e)
+    }
+  },
   cleanupEmptySessions: async () => {
     const emptyIds = get()
       .sessions.filter((s) => s.message_count === 0)

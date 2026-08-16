@@ -209,12 +209,84 @@ button {
 }
 
 .session-list li {
+  position: relative; /* 供下拉菜单绝对定位 */
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 10px 12px;
   border-radius: 8px;
   cursor: pointer;
+}
+
+/* 会话标题：占满剩余宽度，超出省略 */
+.session-title {
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* 每条会话右侧的「...」操作按钮 */
+.session-menu-btn {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.session-menu-btn:hover {
+  background: #e0e0e0;
+  color: var(--text);
+}
+
+/* 会话操作下拉菜单 */
+.session-menu {
+  position: absolute;
+  top: calc(100% - 4px);
+  right: 8px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 96px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  padding: 4px;
+}
+
+.session-menu button {
+  border: none;
+  background: none;
+  text-align: left;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.session-menu button:hover {
+  background: #f0f0f0;
+}
+
+.session-menu button.danger {
+  color: var(--danger);
+}
+
+/* 重命名输入框 */
+.session-rename-input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 14px;
+  outline: none;
 }
 
 .session-list li:hover {
@@ -304,9 +376,17 @@ button {
 .feature-card {
   position: relative; /* 供左上角图标绝对定位 */
   background: #fff;
-  border: 1px solid var(--text);
+  border: 2px solid var(--text);
   border-radius: 16px;
   padding: 40px 16px 16px; /* 顶部留白给图标 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.158); /* 默认阴影 */
+  transition: transform 0.2s ease, box-shadow 0.2s ease; /* 悬停动画 */
+}
+
+/* 鼠标悬停：轻微上移并加深阴影 */
+.feature-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 
 .feature-icon {
@@ -618,7 +698,7 @@ button {
 }
 
 
-
+/*
 .no-session {
   border-top: 1px solid var(--border);
   background: var(--panel);
@@ -626,7 +706,7 @@ button {
   color: var(--muted);
   text-align: center;
 }
-
+*/
 /* 认证页 */
 .auth-page {
   height: 100vh;

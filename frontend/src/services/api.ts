@@ -65,6 +65,15 @@ export const sessionApi = {
       body: JSON.stringify({ title }),
     })
   },
+  rename(id: string, title: string): Promise<Session> {
+    return request<Session>(`/sessions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ title }),
+    })
+  },
+  togglePin(id: string): Promise<Session> {
+    return request<Session>(`/sessions/${id}/pin`, { method: 'POST' })
+  },
   delete(id: string): Promise<{ deleted: boolean }> {
     return request<{ deleted: boolean }>(`/sessions/${id}`, { method: 'DELETE' })
   },

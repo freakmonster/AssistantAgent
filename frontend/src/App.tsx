@@ -1,5 +1,5 @@
 // 应用入口：未登录显示认证，已登录显示三栏聊天布局
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Login } from './components/Auth/Login'
 import { Register } from './components/Auth/Register'
 import { ChatArea } from './components/Chat/ChatArea'
@@ -17,6 +17,7 @@ export default function App() {
   const loadHistory = useMessageStore((s) => s.loadHistory)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const initializedRef = useRef(false)
 
   // 新建对话：复用侧边栏同款逻辑，供收起态下的「+」按钮使用
   const handleNewChat = async () => {
@@ -27,23 +28,22 @@ export default function App() {
     }
   }
 
-  // 登录/刷新后恢复上次会话并加载历史消息
+  // 登录/刷新后直接进入新会话界面（空对话欢迎区）
   useEffect(() => {
-    if (!token) return
+    if (!token) {
+      // 登出后重置，保证再次登录仍能初始化
+      initializedRef.current = false
+      return
+    }
+    // 防 StrictMode 开发环境 effect 双调用导致重复新建会话
+    if (initializedRef.current) return
+    initializedRef.current = true
     void (async () => {
       await useSessionStore.getState().fetchSessions()
-      // 刷新页面时自动清理空会话
+      // 清理历史遗留的空会话，避免堆积
       await useSessionStore.getState().cleanupEmptySessions()
-      const sessions = useSessionStore.getState().sessions
-      const last = useUserStore.getState().lastSessionId
-      if (last && sessions.some((s) => s.id === last)) {
-        useSessionStore.getState().setCurrentSession(last)
-        await useMessageStore.getState().loadHistory(last)
-      } else if (sessions.length > 0) {
-        const first = sessions[0].id
-        useSessionStore.getState().setCurrentSession(first)
-        await useMessageStore.getState().loadHistory(first)
-      }
+      useMessageStore.getState().clearMessages()
+      await useSessionStore.getState().createSession('新对话')
     })()
   }, [token])
 
@@ -63,7 +63,7 @@ export default function App() {
         {currentSessionId ? (
           <ChatInput sessionId={currentSessionId} />
         ) : (
-          <div className="no-session">请先选择或新建会话</div>
+          <div className="no-session"></div>
         )}
       </main>
       <button

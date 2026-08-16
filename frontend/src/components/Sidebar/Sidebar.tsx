@@ -1,5 +1,5 @@
-// 侧边栏：会话列表 + 新建对话 + 用户信息/登出
-import { useEffect } from 'react'
+// 侧边栏：会话列表 + 新建对话 + 用户信息/登出；每条会话支持重命名/置顶/删除
+import { useEffect, useRef, useState } from 'react'
 import { useMessageStore } from '../../stores/messageStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useUserStore } from '../../stores/userStore'
@@ -14,14 +14,41 @@ export function Sidebar({ onCollapse }: SidebarProps) {
   const fetchSessions = useSessionStore((s) => s.fetchSessions)
   const createSession = useSessionStore((s) => s.createSession)
   const setCurrentSession = useSessionStore((s) => s.setCurrentSession)
+  const renameSession = useSessionStore((s) => s.renameSession)
+  const togglePin = useSessionStore((s) => s.togglePin)
+  const deleteSession = useSessionStore((s) => s.deleteSession)
   const loadHistory = useMessageStore((s) => s.loadHistory)
   const setLastSessionId = useUserStore((s) => s.setLastSessionId)
   const user = useUserStore((s) => s.user)
   const logout = useUserStore((s) => s.logout)
 
+  // 当前打开操作菜单的会话 id（同时最多一个）
+  const [menuId, setMenuId] = useState<string | null>(null)
+  // 正在重命名的会话 id 与输入内容
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const renameInputRef = useRef<HTMLInputElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
   useEffect(() => {
     void fetchSessions()
   }, [fetchSessions])
+
+  // 重命名开始时自动聚焦输入框
+  useEffect(() => {
+    if (renamingId) renameInputRef.current?.focus()
+  }, [renamingId])
+
+  // 点击下拉菜单外部时关闭菜单
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuId(null)
+      }
+    }
+    document.addEventListener('click', onDocClick)
+    return () => document.removeEventListener('click', onDocClick)
+  }, [])
 
   const handleSelect = (id: string) => {
     setCurrentSession(id)
@@ -35,6 +62,34 @@ export function Sidebar({ onCollapse }: SidebarProps) {
       setLastSessionId(session.id)
       void loadHistory(session.id)
     }
+  }
+
+  const openMenu = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    setMenuId((cur) => (cur === id ? null : id))
+  }
+
+  const startRename = (id: string, title: string | null) => {
+    setMenuId(null)
+    setRenamingId(id)
+    setRenameValue(title || '')
+  }
+
+  const commitRename = async () => {
+    if (!renamingId) return
+    const title = renameValue.trim()
+    if (title) await renameSession(renamingId, title)
+    setRenamingId(null)
+  }
+
+  const handlePin = async (id: string) => {
+    setMenuId(null)
+    await togglePin(id)
+  }
+
+  const handleDelete = async (id: string) => {
+    setMenuId(null)
+    await deleteSession(id)
   }
 
   return (
@@ -59,7 +114,45 @@ export function Sidebar({ onCollapse }: SidebarProps) {
             className={s.id === currentSessionId ? 'active' : ''}
             onClick={() => handleSelect(s.id)}
           >
-            {s.title || '未命名对话'}
+            {renamingId === s.id ? (
+              <input
+                ref={renameInputRef}
+                className="session-rename-input"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={() => void commitRename()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') void commitRename()
+                  if (e.key === 'Escape') setRenamingId(null)
+                }}
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span className="session-title">{s.title || '未命名对话'}</span>
+            )}
+            <button
+              className="session-menu-btn"
+              onClick={(e) => openMenu(e, s.id)}
+              aria-label="会话操作"
+            >
+              ...
+            </button>
+            {menuId === s.id && (
+              <div className="session-menu" ref={menuRef}>
+                <button onClick={(e) => { e.stopPropagation(); startRename(s.id, s.title) }}>
+                  重命名
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); void handlePin(s.id) }}>
+                  {s.is_pinned ? '取消置顶' : '置顶'}
+                </button>
+                <button
+                  className="danger"
+                  onClick={(e) => { e.stopPropagation(); void handleDelete(s.id) }}
+                >
+                  删除
+                </button>
+              </div>
+            )}
           </li>
         ))}
       </ul>

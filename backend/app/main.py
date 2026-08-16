@@ -12,6 +12,7 @@ from arq.connections import RedisSettings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 import app.models  # noqa: F401  确保所有模型注册到 Base.metadata
 from slowapi import _rate_limit_exceeded_handler
@@ -52,6 +53,16 @@ async def lifespan(app: FastAPI):
     """应用生命周期：建表 + 初始化记忆/MCP/任务队列，关闭时释放资源。"""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # 幂等迁移：create_all 不会修改已存在的表，这里为旧库补充新列（置顶/软删除）
+        await conn.execute(
+            text(
+                "ALTER TABLE sessions "
+                "ADD COLUMN IF NOT EXISTS is_pinned BOOLEAN NOT NULL DEFAULT FALSE"
+            )
+        )
+        await conn.execute(
+            text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ")
+        )
     await memory_service.initialize()
     await mcp_host.initialize(
         {

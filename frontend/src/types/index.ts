@@ -87,6 +87,7 @@ export interface Session {
   id: string
   title: string | null
   thread_id: string
+  is_pinned: boolean
   created_at: string
   updated_at: string
   message_count: number
