@@ -51,8 +51,9 @@ button {
 
 /* 侧边栏 */
 .sidebar {
-  width: 260px;
+  width: var(--sidebar-width, 260px); /* 宽度由 CSS 变量控制，支持拖拽调整 */
   flex-shrink: 0; /* 收起时不被压缩，宽度固定滑出 */
+  position: relative; /* 供右侧拖拽把手绝对定位 */
   background: var(--panel);
   border-right: 1px solid var(--border);
   display: flex;
@@ -62,9 +63,24 @@ button {
   transition: margin-left 0.25s ease; /* 侧边栏滑入/滑出动画 */
 }
 
+/* 右侧拖拽调整宽度的把手 */
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  right: -4px; /* 略超出右边缘，覆盖边框便于抓取 */
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 6;
+}
+
+.sidebar-resizer:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
 /* 侧边栏收起：向左滑出视口，主面板随之平滑变宽 */
 .sidebar-collapsed .sidebar {
-  margin-left: -260px;
+  margin-left: calc(-1 * var(--sidebar-width, 260px));
 }
 
 /* 侧边栏顶部行：品牌名靠左，收起按钮靠右上角 */
@@ -218,6 +234,17 @@ button {
   cursor: pointer;
 }
 
+/* 分组标签：置顶 / 今天 / 7天内 / 30天内 / 30天以上 */
+.session-list .session-group-label {
+  display: block;
+  padding: 16px 12px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: default;
+  user-select: none;
+}
+
 /* 会话标题：占满剩余宽度，超出省略 */
 .session-title {
   flex: 1;
@@ -328,9 +355,9 @@ button {
   transition: padding 0.25s ease; /* 气泡随侧边栏收起平滑居中 */
 }
 
-/* 侧边栏收起时：聊天区左右各补 130px，使气泡宽度与间距保持不变并整体居中（与输入框一致） */
+/* 侧边栏收起时：聊天区左右各补侧边栏宽度一半，使气泡宽度与间距保持不变并整体居中（与输入框一致） */
 .sidebar-collapsed .chat-area {
-  padding: 24px 154px; /* 上下 24px，左右 154px（24 + 130） */
+  padding: 24px calc(24px + var(--sidebar-width, 260px) / 2); /* 上下 24px，左右 24px + 宽度一半 */
 }
 
 /* 主聊天区滚动条：完全隐藏（保留滚轮/触控滚动，界面更干净） */
@@ -347,7 +374,10 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 158px 24px;
+  justify-content: center; /* 垂直居中固定，不再随滚轮上下移动 */
+  min-height: 100%;        /* 占满聊天区高度：内容不足时居中，超高时自然滚动 */
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 .welcome-logo {
@@ -357,7 +387,7 @@ button {
 }
 
 .welcome-intro {
-  margin: 0 0 32px;
+  margin: 0 0 42px;
   text-align: center;
   color: var(--muted);
   font-size: 15px;
@@ -420,31 +450,81 @@ button {
   }
 }
 
+/* 消息行：包裹气泡 + 气泡外部的复制按钮，负责左右对齐与间距 */
+.message-row {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.message-row-user {
+  align-items: flex-end; /* 用户消息整体靠右 */
+  margin-right: 80px;    /* 距右边缘 */
+}
+
+.message-row-assistant {
+  margin-left: 80px;   /* 助手消息靠左，左右各 80px */
+  margin-right: 80px;
+}
+
 .message-bubble {
   max-width: 720px;
-  margin: 0 0 16px; /* 去掉水平 auto，改为由子类控制左右对齐 */
   padding: 12px 16px;
   border-radius: 12px;
 }
 
 .message-user {
   background: var(--user-bg);
-  margin-left: auto; /* 推向右：用户气泡靠右 */
   width: fit-content; /* 宽度收缩到内容，去掉文字后的多余留白 */
-  margin-right: 80px;   /* 距右边缘 */
 }
 
 .message-assistant {
   background: transparent; /* 助手气泡背景透明 */
-  border: none; 
+  border: none;
   max-width: 1100px;
-  margin-right: 80px;
-  margin-left: 80px;    /* 距左边缘 */
+  width: 100%; /* 助手气泡占满行宽，保持原有 block 行为 */
 }
 
 .message-content {
   line-height: 1.6;
   word-break: break-word;
+}
+
+/* 助手消息内渲染的图片：限制显示大小 */
+.message-content img {
+  max-width: 320px;
+  max-height: 320px;
+  object-fit: contain;
+  border-radius: 8px;
+  margin: 8px 0;
+  display: block;
+}
+
+/* 气泡外部的复制按钮 */
+.message-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start; /* 助手消息：按钮靠左 */
+  margin-top: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.message-row-user .message-copy-btn {
+  align-self: flex-end; /* 用户消息：按钮靠右 */
+}
+
+.message-copy-btn:hover {
+  color: var(--text);
+  border-color: var(--text);
+  background: #f5f5f5;
 }
 
 .message-content pre {
@@ -582,6 +662,12 @@ button {
   display: block;
 }
 
+/* 视频显示大小限制（覆盖上方的 max-width: 100%） */
+.attachment-card video,
+.task-card video {
+  max-width: 360px;
+}
+
 .task-list {
   padding: 0 24px 12px;
 }
@@ -597,14 +683,19 @@ button {
   transition: padding 0.25s ease; /* 输入框随侧边栏收起平滑居中 */
 }
 
-/* 侧边栏收起时：输入框宽度保持不变，整体向中心移动（左右各补侧边栏宽度的一半 130px） */
+/* 侧边栏收起时：输入框宽度保持不变，整体向中心移动（左右各补侧边栏宽度的一半） */
 .sidebar-collapsed .chat-input {
-  padding: 3px 264px 17px; /* 上 3px，左右 264px（134 + 130），下 3px */
+  padding: 3px calc(134px + var(--sidebar-width, 260px) / 2) 17px;
 }
 
 /* 空会话窗口（无消息，存在欢迎区 .welcome）：输入框整体上移 */
 .main-panel:has(.welcome) .chat-input {
-  padding: 3px 200px 187px; 
+  padding: 3px 200px 187px;
+}
+
+/* 空会话 + 侧边栏收起：宽度保持不变并整体居中（左右各补侧边栏宽度一半），上移距离不变 */
+.sidebar-collapsed .main-panel:has(.welcome) .chat-input {
+  padding: 3px calc(200px + var(--sidebar-width, 260px) / 2) 187px;
 }
 
 /* 输入框包裹容器：外轮廓 + 上下两部分布局（上半文字输入，下半固定 40px 工具栏） */

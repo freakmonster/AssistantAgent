@@ -1,23 +1,60 @@
 // 侧边栏：会话列表 + 新建对话 + 用户信息/登出；每条会话支持重命名/置顶/删除
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react'
 import { useMessageStore } from '../../stores/messageStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useUserStore } from '../../stores/userStore'
+import type { Session } from '../../types'
 
 interface SidebarProps {
   onCollapse: () => void
+  onResizeStart: (e: ReactMouseEvent<HTMLDivElement>) => void
 }
 
-export function Sidebar({ onCollapse }: SidebarProps) {
+// 将会话按时间分组：置顶 / 今天 / 7天内 / 30天内 / 30天以上
+function groupSessions(
+  sessions: Session[],
+): { label: string; items: Session[] }[] {
+  const pinned = sessions.filter((s) => s.is_pinned)
+  const rest = sessions.filter((s) => !s.is_pinned)
+
+  const startOfToday = new Date()
+  startOfToday.setHours(0, 0, 0, 0)
+  const todayStart = startOfToday.getTime()
+  const dayMs = 24 * 60 * 60 * 1000
+
+  const today: Session[] = []
+  const within7: Session[] = []
+  const within30: Session[] = []
+  const older: Session[] = []
+
+  for (const s of rest) {
+    const t = new Date(s.updated_at).getTime()
+    if (t >= todayStart) today.push(s)
+    else if (t >= todayStart - 7 * dayMs) within7.push(s)
+    else if (t >= todayStart - 30 * dayMs) within30.push(s)
+    else older.push(s)
+  }
+
+  const groups: { label: string; items: Session[] }[] = []
+  if (pinned.length) groups.push({ label: '置顶', items: pinned })
+  if (today.length) groups.push({ label: '今天', items: today })
+  if (within7.length) groups.push({ label: '7天内', items: within7 })
+  if (within30.length) groups.push({ label: '30天内', items: within30 })
+  if (older.length) groups.push({ label: '30天以上', items: older })
+  return groups
+}
+
+export function Sidebar({ onCollapse, onResizeStart }: SidebarProps) {
   const sessions = useSessionStore((s) => s.sessions)
   const currentSessionId = useSessionStore((s) => s.currentSessionId)
   const fetchSessions = useSessionStore((s) => s.fetchSessions)
-  const createSession = useSessionStore((s) => s.createSession)
+  const startNewChat = useSessionStore((s) => s.startNewChat)
   const setCurrentSession = useSessionStore((s) => s.setCurrentSession)
   const renameSession = useSessionStore((s) => s.renameSession)
   const togglePin = useSessionStore((s) => s.togglePin)
   const deleteSession = useSessionStore((s) => s.deleteSession)
   const loadHistory = useMessageStore((s) => s.loadHistory)
+  const clearMessages = useMessageStore((s) => s.clearMessages)
   const setLastSessionId = useUserStore((s) => s.setLastSessionId)
   const user = useUserStore((s) => s.user)
   const logout = useUserStore((s) => s.logout)
@@ -56,12 +93,9 @@ export function Sidebar({ onCollapse }: SidebarProps) {
     void loadHistory(id)
   }
 
-  const handleNew = async () => {
-    const session = await createSession('新对话')
-    if (session) {
-      setLastSessionId(session.id)
-      void loadHistory(session.id)
-    }
+  const handleNew = () => {
+    clearMessages()
+    startNewChat()
   }
 
   const openMenu = (e: React.MouseEvent, id: string) => {
@@ -108,52 +142,57 @@ export function Sidebar({ onCollapse }: SidebarProps) {
         + 新对话
       </button>
       <ul className="session-list">
-        {sessions.map((s) => (
-          <li
-            key={s.id}
-            className={s.id === currentSessionId ? 'active' : ''}
-            onClick={() => handleSelect(s.id)}
-          >
-            {renamingId === s.id ? (
-              <input
-                ref={renameInputRef}
-                className="session-rename-input"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                onBlur={() => void commitRename()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') void commitRename()
-                  if (e.key === 'Escape') setRenamingId(null)
-                }}
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <span className="session-title">{s.title || '未命名对话'}</span>
-            )}
-            <button
-              className="session-menu-btn"
-              onClick={(e) => openMenu(e, s.id)}
-              aria-label="会话操作"
-            >
-              ...
-            </button>
-            {menuId === s.id && (
-              <div className="session-menu" ref={menuRef}>
-                <button onClick={(e) => { e.stopPropagation(); startRename(s.id, s.title) }}>
-                  重命名
-                </button>
-                <button onClick={(e) => { e.stopPropagation(); void handlePin(s.id) }}>
-                  {s.is_pinned ? '取消置顶' : '置顶'}
-                </button>
+        {groupSessions(sessions).map((group) => (
+          <Fragment key={group.label}>
+            <li className="session-group-label">{group.label}</li>
+            {group.items.map((s) => (
+              <li
+                key={s.id}
+                className={s.id === currentSessionId ? 'active' : ''}
+                onClick={() => handleSelect(s.id)}
+              >
+                {renamingId === s.id ? (
+                  <input
+                    ref={renameInputRef}
+                    className="session-rename-input"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => void commitRename()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') void commitRename()
+                      if (e.key === 'Escape') setRenamingId(null)
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span className="session-title">{s.title || '未命名对话'}</span>
+                )}
                 <button
-                  className="danger"
-                  onClick={(e) => { e.stopPropagation(); void handleDelete(s.id) }}
+                  className="session-menu-btn"
+                  onClick={(e) => openMenu(e, s.id)}
+                  aria-label="会话操作"
                 >
-                  删除
+                  ...
                 </button>
-              </div>
-            )}
-          </li>
+                {menuId === s.id && (
+                  <div className="session-menu" ref={menuRef}>
+                    <button onClick={(e) => { e.stopPropagation(); startRename(s.id, s.title) }}>
+                      重命名
+                    </button>
+                    <button onClick={(e) => { e.stopPropagation(); void handlePin(s.id) }}>
+                      {s.is_pinned ? '取消置顶' : '置顶'}
+                    </button>
+                    <button
+                      className="danger"
+                      onClick={(e) => { e.stopPropagation(); void handleDelete(s.id) }}
+                    >
+                      删除
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </Fragment>
         ))}
       </ul>
       <div className="sidebar-footer">
@@ -162,6 +201,8 @@ export function Sidebar({ onCollapse }: SidebarProps) {
           登出
         </button>
       </div>
+      {/* 右侧拖拽调整宽度的把手 */}
+      <div className="sidebar-resizer" onMouseDown={onResizeStart} />
     </aside>
   )
 }

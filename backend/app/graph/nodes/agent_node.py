@@ -46,8 +46,11 @@ ANCHOR_INTERVAL = 10  # 锚点注入间隔（步）
 
 
 def _extract_goal(messages: list) -> str:
-    """提取用户核心目标（第一条人类消息内容）。"""
-    for m in messages:
+    """提取用户核心目标（最新一条人类消息内容）。
+
+    取最新一条而非第一条，避免把上一轮话题（如机票查询）误当作当前目标重新注入。
+    """
+    for m in reversed(messages):
         if isinstance(m, HumanMessage) and isinstance(m.content, str):
             return m.content.strip()
     return ""

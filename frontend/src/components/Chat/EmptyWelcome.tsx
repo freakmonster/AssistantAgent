@@ -60,7 +60,8 @@ export function EmptyWelcome() {
     <div className="welcome">
       <img className="welcome-logo" src="/favicon.svg" alt="Personal Assistant" />
       <p className="welcome-intro">
-        你好，我是超级个人综合型助手，能通过工具调用帮你完成各类任务。
+        你好，我是超级个人综合型助手，能通过工具调用帮你完成各类任务。<br /><br />
+        你可以询问我“你有什么功能”，我会告诉你我提供的所有功能。
       </p>
       <div className="welcome-grid">
         {FEATURES.map((f) => (

@@ -25,8 +25,12 @@ def _build_check_llm() -> ChatOpenAI:
 
 
 def _extract_goal(messages: list) -> str:
-    """提取用户核心目标（第一条人类消息内容）。"""
-    for m in messages:
+    """提取用户核心目标（最新一条人类消息内容）。
+
+    取最新一条而非第一条，避免把已结束的旧话题（如上一轮任务）当作复核基准，
+    导致新话题的正确答案被误判为偏离。
+    """
+    for m in reversed(messages):
         if isinstance(m, HumanMessage) and isinstance(m.content, str):
             return m.content.strip()
     return ""

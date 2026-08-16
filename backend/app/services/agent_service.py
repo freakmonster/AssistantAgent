@@ -161,9 +161,38 @@ class AgentService:
             content = getattr(msg, "content", "")
             if content:
                 return AgentService._sse("text", {"content": content})
+            # 工具调用不在此发送：流式 chunk 的 args 逐块补全、首个 chunk 为空，
+            # 统一由 updates 模式在 agent 节点完成时发出完整 tool_calls
+            return ""
+        if mode == "updates":
+            # 优先提取 agent 节点产出的完整 tool_calls（args 完整）
+            tool_call_event = AgentService._extract_tool_call_event(data)
+            if tool_call_event:
+                return tool_call_event
+            return AgentService._sse("update", data)
+        if mode == "custom":
+            return AgentService._sse("custom", data)
+        return ""
 
-            # 过滤流式 chunk 产生的空壳 tool_call（name 为空或 id 为 null）
+    @staticmethod
+    def _extract_tool_call_event(data: Any) -> str:
+        """从 updates 事件的 agent 节点输出中提取完整 tool_calls，生成 tool_call 事件。
+
+        流式 messages 模式下 tool_call 的 args 逐块补全、首个 chunk 为空，故改从
+        agent 节点完成后的完整 AIMessage 中提取，保证前端展示的 args 完整。
+        """
+        if not isinstance(data, dict):
+            return ""
+        agent_update = data.get("agent")
+        if not isinstance(agent_update, dict):
+            return ""
+        messages = agent_update.get("messages")
+        if not isinstance(messages, list):
+            return ""
+        for msg in messages:
             tool_calls = getattr(msg, "tool_calls", None) or []
+            if not tool_calls:
+                continue
             valid_calls = []
             for tc in tool_calls:
                 name = tc.get("name") if isinstance(tc, dict) else getattr(tc, "name", "")
@@ -172,11 +201,6 @@ class AgentService:
                     valid_calls.append(tc)
             if valid_calls:
                 return AgentService._sse("tool_call", {"tool_calls": valid_calls})
-            return ""
-        if mode == "updates":
-            return AgentService._sse("update", data)
-        if mode == "custom":
-            return AgentService._sse("custom", data)
         return ""
 
     @staticmethod

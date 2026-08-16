@@ -19,7 +19,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.v1.endpoints import auth, chat, sessions, tasks
+from app.api.v1.endpoints import auth, chat, sessions, tasks, users
 from app.core import redis as redis_pool_module
 from app.core.config import settings
 from app.models.database import Base, engine
@@ -140,6 +140,7 @@ app.add_middleware(SlowAPIMiddleware)
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])

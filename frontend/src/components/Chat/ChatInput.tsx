@@ -2,9 +2,17 @@
 import { useRef, useState, type ChangeEvent } from 'react'
 import { useSSE } from '../../hooks/useSSE'
 import { useMessageStore } from '../../stores/messageStore'
+import { useSessionStore } from '../../stores/sessionStore'
 
 interface ChatInputProps {
-  sessionId: string
+  sessionId: string | null
+}
+
+// 生成会话标题：与后端 _gen_session_title 保持一致（去空白、截前 9 字）
+function genTitle(message: string): string {
+  const text = message.trim().replace(/\s+/g, ' ')
+  if (!text) return '新对话'
+  return text.slice(0, 9) + (text.length > 9 ? '…' : '')
 }
 
 // 文字输入区最高高度，超出后滚动条只在文字区（上半部分）出现
@@ -13,8 +21,11 @@ const MAX_TEXTAREA_HEIGHT = 600
 export function ChatInput({ sessionId }: ChatInputProps) {
   const [text, setText] = useState('')
   const streaming = useMessageStore((s) => s.streaming)
+  const ensureSession = useSessionStore((s) => s.ensureSession)
   const { sendMessage } = useSSE()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  // 防重入：ensureSession 异步创建会话期间，避免双击重复发送
+  const sendingRef = useRef(false)
 
   // 文字区高度随行数动态增高，最高 600px
   const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
@@ -26,13 +37,24 @@ export function ChatInput({ sessionId }: ChatInputProps) {
     }
   }
 
-  const handleSend = () => {
+  const handleSend = async () => {
     const content = text.trim()
-    if (!content || streaming) return
-    setText('')
-    const el = textareaRef.current
-    if (el) el.style.height = 'auto'
-    void sendMessage(sessionId, content)
+    if (!content || streaming || sendingRef.current) return
+    sendingRef.current = true
+    try {
+      // 草稿态：先创建会话（用首条消息生成标题），创建成功后再发送
+      let sid = sessionId
+      if (!sid) {
+        sid = await ensureSession(genTitle(content))
+        if (!sid) return
+      }
+      setText('')
+      const el = textareaRef.current
+      if (el) el.style.height = 'auto'
+      void sendMessage(sid, content)
+    } finally {
+      sendingRef.current = false
+    }
   }
 
   return (

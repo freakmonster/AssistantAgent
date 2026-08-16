@@ -1,4 +1,5 @@
 // 应用入口：未登录显示认证，已登录显示三栏聊天布局
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { Login } from './components/Auth/Login'
 import { Register } from './components/Auth/Register'
@@ -12,20 +13,44 @@ import { useUserStore } from './stores/userStore'
 export default function App() {
   const token = useUserStore((s) => s.token)
   const currentSessionId = useSessionStore((s) => s.currentSessionId)
-  const createSession = useSessionStore((s) => s.createSession)
-  const setLastSessionId = useUserStore((s) => s.setLastSessionId)
-  const loadHistory = useMessageStore((s) => s.loadHistory)
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  // 侧边栏宽度（可拖拽调整），上下限分别限制
+  const [sidebarWidth, setSidebarWidth] = useState(260)
   const initializedRef = useRef(false)
 
-  // 新建对话：复用侧边栏同款逻辑，供收起态下的「+」按钮使用
-  const handleNewChat = async () => {
-    const session = await createSession('新对话')
-    if (session) {
-      setLastSessionId(session.id)
-      void loadHistory(session.id)
+  // 侧边栏宽度上下限
+  const SIDEBAR_MIN = 200
+  const SIDEBAR_MAX = 480
+
+  // 新建对话：进入草稿态（不创建后端会话），清空消息，供收起态下的「+」按钮使用
+  const handleNewChat = () => {
+    useMessageStore.getState().clearMessages()
+    useSessionStore.getState().startNewChat()
+  }
+
+  // 拖拽调整侧边栏宽度（mousedown 后监听全局移动，限制在上下限内）
+  const handleResizeStart = (e: ReactMouseEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const startX = e.clientX
+    const startWidth = sidebarWidth
+    const onMove = (ev: MouseEvent) => {
+      const next = Math.min(
+        SIDEBAR_MAX,
+        Math.max(SIDEBAR_MIN, startWidth + (ev.clientX - startX)),
+      )
+      setSidebarWidth(next)
     }
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('mouseup', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('mouseup', onUp)
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
   }
 
   // 登录/刷新后直接进入新会话界面（空对话欢迎区）
@@ -39,11 +64,14 @@ export default function App() {
     if (initializedRef.current) return
     initializedRef.current = true
     void (async () => {
+      // 刷新后恢复用户信息（侧边栏底部邮箱等）
+      await useUserStore.getState().fetchMe()
       await useSessionStore.getState().fetchSessions()
       // 清理历史遗留的空会话，避免堆积
       await useSessionStore.getState().cleanupEmptySessions()
       useMessageStore.getState().clearMessages()
-      await useSessionStore.getState().createSession('新对话')
+      // 进入草稿态，不立即创建会话，等发送首条消息时再建
+      useSessionStore.getState().startNewChat()
     })()
   }, [token])
 
@@ -56,15 +84,17 @@ export default function App() {
   }
 
   return (
-    <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
-      <Sidebar onCollapse={() => setSidebarCollapsed(true)} />
+    <div
+      className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+      style={{ '--sidebar-width': `${sidebarWidth}px` } as CSSProperties}
+    >
+      <Sidebar
+        onCollapse={() => setSidebarCollapsed(true)}
+        onResizeStart={handleResizeStart}
+      />
       <main className="main-panel">
         <ChatArea />
-        {currentSessionId ? (
-          <ChatInput sessionId={currentSessionId} />
-        ) : (
-          <div className="no-session"></div>
-        )}
+        <ChatInput sessionId={currentSessionId} />
       </main>
       <button
         className="sidebar-expand-btn"

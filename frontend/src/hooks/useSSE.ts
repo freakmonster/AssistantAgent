@@ -106,8 +106,14 @@ export function useSSE() {
           case 'tool_call': {
             const calls = ((data as { tool_calls?: ToolCall[] })?.tool_calls ?? [])
             for (const c of calls) {
-              if (!accumulatedCalls.some((x) => x.id === c.id)) {
-                accumulatedCalls.push(c)
+              const idx = accumulatedCalls.findIndex((x) => x.id === c.id)
+              if (idx >= 0) {
+                // 流式下同一调用会多次下发，后续 chunk 的 args 更完整，需覆盖而非丢弃
+                accumulatedCalls = accumulatedCalls.map((x, i) =>
+                  i === idx ? { ...x, ...c } : x,
+                )
+              } else {
+                accumulatedCalls = [...accumulatedCalls, c]
               }
             }
             setToolCalls(assistantId, accumulatedCalls)
