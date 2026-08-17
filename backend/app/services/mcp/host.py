@@ -60,6 +60,36 @@ class MCPHost:
             if tool.name in timeouts:
                 self._tool_timeouts[tool.name] = timeouts[tool.name]
 
+    def set_tool_timeout(self, tool_name: str, timeout: float | None) -> None:
+        """覆盖单个工具的超时（秒）。
+
+        MCP 工具初始化后默认用 MCP_TOOL_TIMEOUT；对耗时型工具（如视频理解、
+        文档生成）可单独调大。值 None 表示该工具自管理超时（内部自行控制）。
+
+        Args:
+            tool_name: 工具名称（须与 MCP 工具列表中的名字一致）。
+            timeout: 超时秒数，None 表示自管理超时。
+        """
+        self._tool_timeouts[tool_name] = timeout
+
+    def augment_tool_description(self, tool_name: str, suffix: str) -> None:
+        """给指定工具的描述追加补充说明。
+
+        服务端返回的工具 description 无法直接修改，但本地可追加说明，
+        用于引导 LLM 正确构造参数。典型场景：schema 未把某参数标为必填，
+        但服务端实际要求必填（如视频理解的 text），可在此告知 LLM
+        「参数必填；若用户未提供，请自动补通用默认值」。
+
+        Args:
+            tool_name: 工具名称（须与已注册工具名一致）。
+            suffix: 追加到原描述末尾的补充说明。
+        """
+        tool = self._tool_registry.get(tool_name)
+        if tool is None:
+            logger.warning("工具 %s 未注册，无法追加描述说明", tool_name)
+            return
+        tool.description = f"{tool.description} {suffix}"
+
     async def initialize(self, servers: dict | None = None) -> None:
         """连接所有已注册的 MCP Server 并注册其工具。
 

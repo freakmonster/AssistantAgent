@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     MODELSCOPE_FOOD_URL: str
     MODELSCOPE_LEETCODE_URL: str
     MODELSCOPE_ARXIV_URL: str
+    MODELSCOPE_DOCUMENT_GENERATOR_URL: str
+    MODELSCOPE_BAZI_URL: str
+    MODELSCOPE_QWEN_VIDEO_URL: str
 
     # 会话压缩（上下文达到阈值时用「摘要 + 最近窗口」替换早期消息）
     SUMMARIZE_TOKEN_THRESHOLD: int = 700_000  # 触发压缩的 token 阈值（1M 窗口的 70%）

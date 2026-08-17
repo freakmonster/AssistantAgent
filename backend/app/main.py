@@ -27,12 +27,15 @@ from app.services.mcp.host import mcp_host
 from app.services.mcp.server_config import (
     build_amap_server,
     build_arxiv_server,
+    build_bazi_server,
     build_chart_server,
     build_deepwiki_server,
+    build_document_generator_server,
     build_fetch_server,
     build_flight_compare_server,
     build_food_server,
     build_leetcode_server,
+    build_qwen_video_server,
     build_t12306_server,
     build_tavily_server,
 )
@@ -76,7 +79,19 @@ async def lifespan(app: FastAPI):
             "food": build_food_server(),
             "leetcode": build_leetcode_server(settings.MODELSCOPE_TOKEN),
             "arxiv": build_arxiv_server(settings.MODELSCOPE_TOKEN),
+            "document_generator": build_document_generator_server(settings.MODELSCOPE_TOKEN),
+            "bazi": build_bazi_server(settings.MODELSCOPE_TOKEN),
+            "qwen_video": build_qwen_video_server(settings.MODELSCOPE_TOKEN),
         }
+    )
+    # 视频理解单次调用约 10~20s，单独调大超时（默认 MCP 30s 不够）
+    mcp_host.set_tool_timeout("interpret_video_content", 120)
+    # 视频理解 text 参数在 schema 中未标必填，但服务端实际必填：
+    # 追加说明引导 LLM 在用户只给链接时自动补一个通用解读指令
+    mcp_host.augment_tool_description(
+        "interpret_video_content",
+        "注意：text 与 video_url 均为必填参数。若用户只提供了视频链接而未提出具体问题，"
+        "请在 text 中自动补充通用解读指令（例如：请概括这段视频的主要内容，提取关键信息）。",
     )
     # ARQ 任务队列连接池（供任务入队与状态查询使用）
     app.state.redis_pool = await create_pool(

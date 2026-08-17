@@ -212,6 +212,78 @@ def build_arxiv_server(token: str) -> dict:
     }
 
 
+def build_document_generator_server(token: str) -> dict:
+    """构造 DOCX/PDF 文档生成 MCP Server 的 Streamable HTTP 连接配置。
+
+    同为魔搭（ModelScope）api-inference 托管服务，提供 markdown_to_document
+    工具：接收完整 Markdown 文本，用 Pandoc 转换为 DOCX/PDF 文档并应用字体设置，
+    返回文件下载链接。
+
+    注意（实测发现）：该服务鉴权与 chart 等不同，Authorization 头**直接放 token
+    值，不带 Bearer 前缀**（带 Bearer 反而会握手失败）。
+
+    Args:
+        token: 魔搭（ModelScope）访问令牌。
+
+    Returns:
+        langchain-mcp-adapters 可识别的 streamable_http 连接配置字典。
+    """
+    return {
+        "transport": "streamable_http",
+        "url": settings.MODELSCOPE_DOCUMENT_GENERATOR_URL,
+        "headers": {"Authorization": token},
+    }
+
+
+def build_bazi_server(token: str) -> dict:
+    """构造八字排盘 MCP Server 的 Streamable HTTP 连接配置。
+
+    同为魔搭（ModelScope）api-inference 托管服务，鉴权方式与 chart 一致：
+    通过 Authorization Bearer 传递令牌。提供 3 个工具：
+    getBaziDetail（公历/农历计算八字）、getSolarTimes（八字反推公历时间）、
+    getChineseCalendar（黄历查询）。
+
+    注意（实测发现）：getBaziDetail 的 gender 参数在服务端 schema 中**必填**
+    （文档标注可选，但缺省会 422 校验失败），调用时需带上 0（女）/1（男）。
+
+    Args:
+        token: 魔搭（ModelScope）访问令牌。
+
+    Returns:
+        langchain-mcp-adapters 可识别的 streamable_http 连接配置字典。
+    """
+    return {
+        "transport": "streamable_http",
+        "url": settings.MODELSCOPE_BAZI_URL,
+        "headers": {"Authorization": f"Bearer {token}"},
+    }
+
+
+def build_qwen_video_server(token: str) -> dict:
+    """构造通义千问-视频理解 MCP Server 的 Streamable HTTP 连接配置。
+
+    同为魔搭（ModelScope）api-inference 托管服务，鉴权方式与 chart 一致：
+    通过 Authorization Bearer 传递令牌。提供 interpret_video_content 工具，
+    通过视频链接和文字描述解读视频内容，返回结构化文字描述。
+
+    注意（实测发现）：
+    - text 与 video_url 均需传入（缺 text 会 400）。
+    - 单次调用约 10~20s（视视频长度而定），需在 main.py 中对该工具单独
+      调大超时（见 mcp_host.set_tool_timeout），默认 30s 有超时风险。
+
+    Args:
+        token: 魔搭（ModelScope）访问令牌。
+
+    Returns:
+        langchain-mcp-adapters 可识别的 streamable_http 连接配置字典。
+    """
+    return {
+        "transport": "streamable_http",
+        "url": settings.MODELSCOPE_QWEN_VIDEO_URL,
+        "headers": {"Authorization": f"Bearer {token}"},
+    }
+
+
 def build_filesystem_server(allowed_root: str) -> dict:
     """构造本地文件系统 MCP Server 的 stdio 连接配置。
 
