@@ -24,7 +24,7 @@ export function ChatInput({ sessionId }: ChatInputProps) {
   const streaming = useMessageStore((s) => s.streaming)
   const ensureSession = useSessionStore((s) => s.ensureSession)
   const { t } = useTranslation()
-  const { sendMessage } = useSSE()
+  const { sendMessage, stop } = useSSE()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   // 防重入：ensureSession 异步创建会话期间，避免双击重复发送
   const sendingRef = useRef(false)
@@ -78,19 +78,25 @@ export function ChatInput({ sessionId }: ChatInputProps) {
         <div className="chat-input-toolbar">
           {/* 预留：文件上传按钮 */}
           {/* 预留：对话模型选择按钮 */}
-          <button
-            onClick={handleSend}
-            disabled={streaming || !text.trim()}
-            aria-label={t.chat.send}
-          >
-            {streaming ? (
-              <span className="chat-send-dots">…</span>
-            ) : (
+          {streaming ? (
+            <button
+              onClick={stop}
+              aria-label={t.chat.stop}
+              title={t.chat.stop}
+            >
+              <span className="chat-stop-icon" />
+            </button>
+          ) : (
+            <button
+              onClick={handleSend}
+              disabled={!text.trim()}
+              aria-label={t.chat.send}
+            >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
               </svg>
-            )}
-          </button>
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -1055,6 +1055,15 @@ button {
   line-height: 1;
 }
 
+/* 暂停按钮：白色圆角方块图标，点击中断生成 */
+.chat-input button .chat-stop-icon {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--btn-text);
+  display: block;
+}
+
 .chat-input button:disabled {
   background: #898c9b;
   cursor: not-allowed;

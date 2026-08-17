@@ -12,6 +12,7 @@ interface MessageState {
   setToolCallStatus: (id: string, status: ToolCallStatus) => void
   setTaskId: (id: string, taskId: string) => void
   setMessages: (messages: ChatMessage[]) => void
+  removeMessage: (id: string) => void
   loadHistory: (sessionId: string) => Promise<void>
   clearMessages: () => void
   setStreaming: (streaming: boolean) => void
@@ -45,6 +46,8 @@ export const useMessageStore = create<MessageState>((set) => ({
       messages: state.messages.map((m) => (m.id === id ? { ...m, taskId } : m)),
     })),
   setMessages: (messages) => set({ messages }),
+  removeMessage: (id) =>
+    set((state) => ({ messages: state.messages.filter((m) => m.id !== id) })),
   loadHistory: async (sessionId) => {
     try {
       const list = await messageApi.list(sessionId)

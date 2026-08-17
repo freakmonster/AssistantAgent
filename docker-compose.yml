@@ -1,6 +1,83 @@
-version: '3.8'
+# 超级个人综合型助手 服务编排
+# 说明：仅绑定本机回环端口（隧道访问），后端/前端均不直接暴露端口。
+# 端口参数化：NGINX_PORT / POSTGRES_PORT / REDIS_PORT，默认 80/5432/6379；
+# 同一台机器跑两份时，发布版通过 .env 覆盖为其它端口（如 8088/5433/6380）避免冲突。
 
 services:
+  nginx:
+    # 唯一对外入口：整合前端静态托管 + 后端 API 反向代理 + SSE 流式
+    # 仅绑定本机回环（隧道访问），公网无法直接扫描到
+    image: nginx:alpine
+    ports:
+      - "127.0.0.1:${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - frontend_dist:/usr/share/nginx/html:ro
+    depends_on:
+      frontend:
+        condition: service_completed_successfully
+      fastapi:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    # 前端构建服务：构建产物写入 named volume，供 nginx 挂载托管
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - frontend_dist:/out
+    # 每次启动将镜像内最新 dist 复制到 volume，保证前端更新后能刷新产物
+    command: ["sh", "-c", "cp -r /app/dist/. /out/"]
+
+  fastapi:
+    # 后端 API：仅容器网络内可达（8000），对外由 nginx 反代
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      # 容器内必须以服务名访问 postgres/redis，覆盖 .env 中可能的 localhost
+      DATABASE_URL: postgresql://agent_user:secure_password@postgres:5432/agent_db
+      REDIS_URL: redis://redis:6379
+    expose:
+      - "8000"
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  worker:
+    # ARQ 异步任务 Worker（阶段 5），消费 run_agent_task 等长耗时任务
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: arq app.tasks.worker.WorkerSettings
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgresql://agent_user:secure_password@postgres:5432/agent_db
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      replicas: 2  # 可横向扩展
+
   postgres:
     # 使用 pgvector 镜像以支持后续长期记忆的向量检索
     image: pgvector/pgvector:pg15
@@ -9,7 +86,7 @@ services:
       POSTGRES_PASSWORD: secure_password
       POSTGRES_DB: agent_db
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     restart: unless-stopped
@@ -22,7 +99,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -30,26 +107,7 @@ services:
       timeout: 5s
       retries: 5
 
-  worker:
-    # ARQ 异步任务 Worker（阶段 5），消费 run_agent_task 等长耗时任务
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    command: arq app.tasks.worker.WorkerSettings
-    environment:
-      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
-      REDIS_URL: redis://redis:6379
-      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
-      TAVILY_API_KEY: ${TAVILY_API_KEY}
-      SECRET_KEY: ${SECRET_KEY}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-    deploy:
-      replicas: 2  # 可横向扩展
-
 volumes:
   pg_data:
+  frontend_dist:
+  uploads_data:

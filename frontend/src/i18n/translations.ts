@@ -36,6 +36,7 @@ const zh = {
   chat: {
     inputPlaceholder: '畅所欲言',
     send: '发送',
+    stop: '停止生成',
     copy: '复制',
     copied: '已复制',
     thinking: '正在思考…',
@@ -142,6 +143,7 @@ const en: TranslationKey = {
   chat: {
     inputPlaceholder: 'Type your message…',
     send: 'Send',
+    stop: 'Stop',
     copy: 'Copy',
     copied: 'Copied',
     thinking: 'Thinking…',

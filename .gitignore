@@ -51,6 +51,7 @@ uploads/
 media/
 backend/media/
 backend/uploads/
+
 *.mp4
 *.mp3
 *.wav
@@ -69,9 +70,11 @@ backend/uploads/
 Thumbs.db
 desktop.ini
 
-# ---------- 测试与脚本 ----------
+# ---------- 测试与脚本 ----------\nbackend/tests/\nbackend/scripts/\n# 根目录本地运维脚本（含本机路径/隧道配置，不入库）\nstart-tunnel.ps1
 backend/tests/
 backend/scripts/
+# 根目录本地运维脚本（含本机路径/隧道配置，不入库）
+start-tunnel.ps1
 
 # ---------- Trae 本地配置 ----------
 .trae/
@@ -79,3 +82,6 @@ backend/scripts/
 # ---------- 根目录文档（预留 README.md，后续创建时保留入库） ----------
 /*.md
 !/README.md
+
+install_ffmpeg.ps1
+start-tunnel.ps1

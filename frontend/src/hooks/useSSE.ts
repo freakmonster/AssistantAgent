@@ -1,5 +1,5 @@
 // SSE 流式接收：fetch + ReadableStream 解析事件，驱动消息与任务状态
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { getAuthToken } from '../services/api'
 import { useMessageStore } from '../stores/messageStore'
 import { useSessionStore } from '../stores/sessionStore'
@@ -11,6 +11,11 @@ function genId(): string {
     return crypto.randomUUID()
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+// 判断是否为用户主动中断（AbortError），区别于网络/服务错误
+function isAbortError(e: unknown): boolean {
+  return e instanceof DOMException && e.name === 'AbortError'
 }
 
 // 解析单个 SSE 帧为 { event, data }
@@ -34,14 +39,29 @@ export function useSSE() {
   const setToolCallStatus = useMessageStore((s) => s.setToolCallStatus)
   const setTaskId = useMessageStore((s) => s.setTaskId)
   const setStreaming = useMessageStore((s) => s.setStreaming)
+  const removeMessage = useMessageStore((s) => s.removeMessage)
   const registerTask = useTaskStore((s) => s.registerTask)
+
+  // 当前请求的 AbortController，stop() 时中断 fetch，进而断开 SSE、取消后端生成
+  const controllerRef = useRef<AbortController | null>(null)
+  // 上一轮「user + assistant」消息 id 对：暂停后保留，重生成时清掉半截
+  const pendingPairRef = useRef<{ userId: string; assistantId: string } | null>(null)
 
   const sendMessage = useCallback(
     async (sessionId: string, message: string) => {
+      // 重生成前清理上一次被暂停的半截（user + assistant 成对清掉）
+      if (pendingPairRef.current) {
+        removeMessage(pendingPairRef.current.assistantId)
+        removeMessage(pendingPairRef.current.userId)
+        pendingPairRef.current = null
+      }
+
       // 先落库：用户消息 + 空的 assistant 消息（流式填充目标）
+      const userId = genId()
       const assistantId = genId()
+      pendingPairRef.current = { userId, assistantId }
       addMessage({
-        id: genId(),
+        id: userId,
         role: 'user',
         content: message,
         createdAt: Date.now(),
@@ -134,6 +154,9 @@ export function useSSE() {
         }
       }
 
+      let aborted = false
+      const controller = new AbortController()
+      controllerRef.current = controller
       try {
         const res = await fetch('/api/v1/chat/stream', {
           method: 'POST',
@@ -142,6 +165,7 @@ export function useSSE() {
             Authorization: `Bearer ${getAuthToken() ?? ''}`,
           },
           body: JSON.stringify({ session_id: sessionId, message }),
+          signal: controller.signal,
         })
         if (!res.ok || !res.body) {
           throw new Error(`HTTP ${res.status}`)
@@ -168,11 +192,21 @@ export function useSSE() {
           }
         }
       } catch (e) {
-        appendContent(
-          assistantId,
-          `\n[请求失败：${e instanceof Error ? e.message : String(e)}]`,
-        )
+        if (isAbortError(e)) {
+          // 用户主动暂停：保留已生成的半截内容，不追加错误提示
+          aborted = true
+        } else {
+          appendContent(
+            assistantId,
+            `\n[请求失败：${e instanceof Error ? e.message : String(e)}]`,
+          )
+        }
       } finally {
+        controllerRef.current = null
+        // 正常完整结束才清标记；暂停则保留，待下次重生成时清掉半截
+        if (!aborted) {
+          pendingPairRef.current = null
+        }
         setStreaming(false)
         // 对话落库后刷新会话列表，让侧边栏标题（首条消息自动命名）立即更新
         void useSessionStore.getState().fetchSessions()
@@ -185,9 +219,15 @@ export function useSSE() {
       setToolCallStatus,
       setTaskId,
       setStreaming,
+      removeMessage,
       registerTask,
     ],
   )
 
-  return { sendMessage }
+  // 停止当前生成：中断 fetch，触发后端协程取消
+  const stop = useCallback(() => {
+    controllerRef.current?.abort()
+  }, [])
+
+  return { sendMessage, stop }
 }

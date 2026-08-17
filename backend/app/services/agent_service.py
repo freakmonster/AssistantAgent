@@ -66,19 +66,24 @@ class AgentService:
                     formatted = self._format_sse_event(event)
                     if formatted:
                         yield formatted
+        except asyncio.CancelledError:
+            # 客户端主动断开（前端暂停/取消）：不落库、不发 done，直接退出，
+            # 交由上层取消传播，避免在 finally 中对已关闭的流 yield 引发异常
+            raise
         except asyncio.TimeoutError:
             yield self._sse("error", {"error": "请求超时"})
+            yield self._sse("done", {"status": "completed"})
         except Exception as exc:
             yield self._sse("error", {"error": str(exc)})
+            yield self._sse("done", {"status": "completed"})
         else:
-            # 流正常完整结束后才落库（超时/异常不会进入 else，避免写入残缺消息）
+            # 流正常完整结束后才落库（超时/异常/取消不会进入 else，避免写入残缺消息）
             state = await self.agent.aget_state(config)
             await self._persist_messages(
                 config["configurable"]["thread_id"],
                 message,
                 state.values.get("messages", []),
             )
-        finally:
             yield self._sse("done", {"status": "completed"})
 
     async def _persist_messages(
