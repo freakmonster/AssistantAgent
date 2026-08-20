@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     DEEPSEEK_BASE_URL: str = "https://api.deepseek.com"
     TAVILY_API_KEY: str
 
+    # 模型路由（前端可选模型：不同供应商不同模型由用户单独配置）
+    # JSON 数组字符串，每项 {"id","name","base_url","api_key"}；base_url/api_key 留空时回退 DEEPSEEK_*
+    # 未配置时默认两条：deepseek-v4-pro / deepseek-v4-flash
+    MODEL_ROUTES: str = ""
+    DEFAULT_MODEL: str = "deepseek-v4-pro"  # 前端未指定模型时使用的默认模型 id
+
     # 智谱视频生成
     ZHIPU_API_KEY: str
     ZHIPU_BASE_URL: str = "https://open.bigmodel.cn"
@@ -133,8 +139,8 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["*"]
 
     # 超时层级（阶段 5）：内部组件超时 < 全流程超时
-    MAIN_FLOW_TIMEOUT: int = 300  # 主流程总超时（秒）
-    MODEL_TIMEOUT: int = 120  # DeepSeek 模型调用超时（秒）
+    MAIN_FLOW_TIMEOUT: int = 180  # 主流程总超时（秒），单轮对话最长等待
+    MODEL_TIMEOUT: int = 45  # 模型单次尝试超时（秒）
     MCP_TOOL_TIMEOUT: int = 30  # MCP 工具调用超时（秒）
     SQL_TIMEOUT: int = 10  # SQL 查询超时（秒）
 

@@ -1,5 +1,5 @@
 // API 客户端：统一 fetch 封装 + 各端点方法
-import type { Session, TaskResult, TokenResponse, User } from '../types'
+import type { ModelOption, Session, TaskResult, TokenResponse, User } from '../types'
 
 const API_BASE = '/api/v1'
 
@@ -114,6 +114,13 @@ export const messageApi = {
 export const userApi = {
   me(): Promise<User> {
     return request<User>('/users/me')
+  },
+}
+
+// 可选模型接口（GET /api/v1/chat/models，返回 id + name 供前端下拉）
+export const modelApi = {
+  list(): Promise<ModelOption[]> {
+    return request<ModelOption[]>('/chat/models')
   },
 }
 

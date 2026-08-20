@@ -12,8 +12,23 @@ from app.models.user import User
 from app.schemas.chat import ChatRequest, ChatResponse
 from app.services.agent_service import AgentService
 from app.utils import logger as app_logger
+from app.utils.llm import list_available_models, resolve_model
 
 router = APIRouter()
+
+
+def _resolve_model_id(model: str | None) -> str:
+    """校验前端传入的模型 id，返回规范 id；非法时抛 400。"""
+    try:
+        return resolve_model(model).id
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.get("/models")
+async def list_models() -> list[dict]:
+    """返回前端可选的模型列表（仅 id + name，不暴露供应商密钥）。"""
+    return list_available_models()
 
 
 @router.post("", response_model=ChatResponse)
@@ -36,6 +51,8 @@ async def chat(
     # 绑定 user_id/session_id 到结构化日志上下文（trace_id 已由中间件绑定）
     app_logger.bind_request_context(user_id=str(current_user.id), session_id=str(session.id))
 
+    model_id = _resolve_model_id(request.model)
+
     agent_service = AgentService()
     response = await agent_service.run_agent_sync(
         thread_id=session.thread_id,
@@ -43,6 +60,7 @@ async def chat(
         session_id=str(session.id),
         message=request.message,
         attachments=request.attachments,
+        model=model_id,
     )
     return ChatResponse(session_id=request.session_id, response=response)
 
@@ -66,6 +84,8 @@ async def chat_stream(
     # 绑定 user_id/session_id 到结构化日志上下文（trace_id 已由中间件绑定）
     app_logger.bind_request_context(user_id=str(current_user.id), session_id=str(session.id))
 
+    model_id = _resolve_model_id(request.model)
+
     agent_service = AgentService()
     event_generator = agent_service.stream_agent_response(
         thread_id=session.thread_id,
@@ -73,6 +93,7 @@ async def chat_stream(
         session_id=str(session.id),
         message=request.message,
         attachments=request.attachments,
+        model=model_id,
     )
     return StreamingResponse(
         event_generator,

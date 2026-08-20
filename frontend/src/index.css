@@ -1117,6 +1117,27 @@ button {
   color: #9ca3af;
 }
 
+/* 模型选择下拉：工具栏右侧，发送按钮左侧 */
+.chat-input select.chat-model-select {
+  flex: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  height: 30px;
+  padding: 0 8px;
+  margin-right: 5px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+}
+.chat-input select.chat-model-select:disabled {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
 /* 录音倒计时指示器：进度条（随剩余时间缩短）+ 秒数 */
 .chat-recording-indicator {
   display: flex;

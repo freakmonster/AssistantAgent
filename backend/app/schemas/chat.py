@@ -8,6 +8,7 @@ class ChatRequest(BaseModel):
     session_id: str
     message: str
     attachments: list[str] = []  # 已上传文件的 file_id 列表（阶段 9）
+    model: str | None = None  # 前端选择的模型 id；未指定时后端回退 DEFAULT_MODEL
 
 
 class ChatResponse(BaseModel):

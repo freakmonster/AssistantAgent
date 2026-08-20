@@ -3,6 +3,7 @@ import { useCallback, useRef } from 'react'
 import { getAuthToken } from '../services/api'
 import { useMessageStore } from '../stores/messageStore'
 import { useSessionStore } from '../stores/sessionStore'
+import { useSettingsStore } from '../stores/settingsStore'
 import { useTaskStore } from '../stores/taskStore'
 import type { ToolCall, ToolPayload } from '../types'
 
@@ -180,6 +181,7 @@ export function useSSE() {
             session_id: sessionId,
             message,
             attachments: (attachments ?? []).map((a) => a.file_id),
+            model: useSettingsStore.getState().model || undefined,
           }),
           signal: controller.signal,
         })

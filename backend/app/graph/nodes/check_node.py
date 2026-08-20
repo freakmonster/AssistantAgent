@@ -16,7 +16,7 @@ MAX_DRIFT_WARNINGS = 2  # 最多复核提醒次数，超过后强制放行，避
 def _build_check_llm() -> ChatOpenAI:
     """构建复核模型（温度 0，保证判断稳定；禁用流式避免内部判断泄露到 SSE）。"""
     return ChatOpenAI(
-        model="deepseek-chat",
+        model=settings.DEFAULT_MODEL,
         api_key=settings.DEEPSEEK_API_KEY,
         base_url=settings.DEEPSEEK_BASE_URL,
         temperature=0,

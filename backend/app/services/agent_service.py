@@ -25,13 +25,14 @@ class AgentService:
         self.agent = get_agent()
 
     @staticmethod
-    def _build_config(thread_id: str, user_id: str, session_id: str) -> dict:
-        """构造 LangGraph 运行时配置（含防死循环护栏）。"""
+    def _build_config(thread_id: str, user_id: str, session_id: str, model: str | None = None) -> dict:
+        """构造 LangGraph 运行时配置（含防死循环护栏与模型路由）。"""
         return {
             "configurable": {
                 "thread_id": thread_id,
                 "user_id": user_id,
                 "session_id": session_id,
+                "model": model,
             },
             "recursion_limit": 25,
         }
@@ -43,9 +44,10 @@ class AgentService:
         session_id: str,
         message: str,
         attachments: list[str] | None = None,
+        model: str | None = None,
     ) -> str:
         """非流式执行 Agent，返回最终回答文本。"""
-        config = self._build_config(thread_id, user_id, session_id)
+        config = self._build_config(thread_id, user_id, session_id, model)
         inputs = {
             "messages": [
                 {
@@ -72,9 +74,10 @@ class AgentService:
         session_id: str,
         message: str,
         attachments: list[str] | None = None,
+        model: str | None = None,
     ) -> AsyncGenerator[str, None]:
         """流式执行 Agent，生成 SSE 事件。"""
-        config = self._build_config(thread_id, user_id, session_id)
+        config = self._build_config(thread_id, user_id, session_id, model)
         inputs = {
             "messages": [
                 {

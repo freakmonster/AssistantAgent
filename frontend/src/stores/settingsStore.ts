@@ -6,6 +6,7 @@ export type Theme = 'light' | 'dark'
 
 const THEME_KEY = 'agent_theme'
 const LOCALE_KEY = 'agent_locale'
+const MODEL_KEY = 'agent_model'
 
 function loadTheme(): Theme {
   try {
@@ -24,6 +25,16 @@ function loadLocale(): Locale {
   }
 }
 
+function loadModel(): string {
+  // 默认选中 DeepSeek V4 Pro（与后端 DEFAULT_MODEL 一致），空值也回退到它
+  const DEFAULT_MODEL = 'deepseek-v4-pro'
+  try {
+    return localStorage.getItem(MODEL_KEY) || DEFAULT_MODEL
+  } catch {
+    return DEFAULT_MODEL
+  }
+}
+
 const initialTheme = loadTheme()
 // 模块加载时即应用主题，避免页面闪烁（先于 React 渲染）
 document.documentElement.setAttribute('data-theme', initialTheme)
@@ -31,13 +42,16 @@ document.documentElement.setAttribute('data-theme', initialTheme)
 interface SettingsState {
   theme: Theme
   locale: Locale
+  model: string
   setTheme: (theme: Theme) => void
   setLocale: (locale: Locale) => void
+  setModel: (model: string) => void
 }
 
 export const useSettingsStore = create<SettingsState>((set) => ({
   theme: initialTheme,
   locale: loadLocale(),
+  model: loadModel(),
   setTheme: (theme) => {
     try {
       localStorage.setItem(THEME_KEY, theme)
@@ -54,6 +68,14 @@ export const useSettingsStore = create<SettingsState>((set) => ({
       // 忽略存储失败，语言仍即时生效
     }
     set({ locale })
+  },
+  setModel: (model) => {
+    try {
+      localStorage.setItem(MODEL_KEY, model)
+    } catch {
+      // 忽略存储失败，模型选择仍即时生效
+    }
+    set({ model })
   },
 }))
 

@@ -30,7 +30,7 @@ def estimate_tokens(messages: list[BaseMessage]) -> int:
 def _build_summary_llm() -> ChatOpenAI:
     """构建用于生成摘要的模型（温度 0，保证摘要稳定）。"""
     return build_chat_llm(
-        model="deepseek-chat",
+        model=settings.DEFAULT_MODEL,
         api_key=settings.DEEPSEEK_API_KEY,
         base_url=settings.DEEPSEEK_BASE_URL,
     )

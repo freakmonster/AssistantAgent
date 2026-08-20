@@ -1,13 +1,13 @@
 // 输入区：外轮廓内分上下两部分（文字输入 + 底部工具栏），发送触发 SSE 流式对话。
 // 支持文件上传：选择 → 上传 → 轮询解析状态（ready 后才可发送），附件以 chip 展示。
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { AudioOutlined } from '@ant-design/icons'
 import { useSSE } from '../../hooks/useSSE'
-import { audioApi, filesApi, taskApi } from '../../services/api'
+import { audioApi, filesApi, modelApi, taskApi } from '../../services/api'
 import { useMessageStore } from '../../stores/messageStore'
 import { useSessionStore } from '../../stores/sessionStore'
-import { useTranslation } from '../../stores/settingsStore'
-import type { PendingFile } from '../../types'
+import { useSettingsStore, useTranslation } from '../../stores/settingsStore'
+import type { ModelOption, PendingFile } from '../../types'
 
 interface ChatInputProps {
   sessionId: string | null
@@ -46,6 +46,26 @@ export function ChatInput({ sessionId }: ChatInputProps) {
   const ensureSession = useSessionStore((s) => s.ensureSession)
   const { t } = useTranslation()
   const { sendMessage, stop } = useSSE()
+  // 模型选择：全局偏好（localStorage），随发送请求下发给后端路由
+  const model = useSettingsStore((s) => s.model)
+  const setModel = useSettingsStore((s) => s.setModel)
+  const [models, setModels] = useState<ModelOption[]>([])
+
+  // 拉取后端可选模型列表（仅 id + name）；失败时保持空列表，选择器只显示默认项
+  useEffect(() => {
+    let cancelled = false
+    modelApi
+      .list()
+      .then((list) => {
+        if (!cancelled) setModels(list)
+      })
+      .catch(() => {
+        // 忽略：保持空列表，退化为仅「默认模型」一项
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   // 防重入：ensureSession 异步创建会话期间，避免双击重复发送
@@ -382,6 +402,21 @@ export function ChatInput({ sessionId }: ChatInputProps) {
             onChange={handleFileSelect}
             style={{ display: 'none' }}
           />
+          {/* 模型选择下拉：全局偏好，切换后随下次发送下发给后端路由 */}
+          <select
+            className="chat-model-select"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            disabled={streaming}
+            aria-label="选择模型"
+            title="选择模型"
+          >
+            {models.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
           {streaming ? (
             <button
               onClick={stop}

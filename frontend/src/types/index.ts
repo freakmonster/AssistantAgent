@@ -104,6 +104,12 @@ export interface Session {
   message_count: number
 }
 
+// 可选模型（GET /api/v1/chat/models 返回，仅 id + name）
+export interface ModelOption {
+  id: string
+  name: string
+}
+
 // 用户
 export interface User {
   id: string
