@@ -19,6 +19,12 @@ slowapi
 redis
 httpx
 
+# 文件上传与解析（阶段 9）
+pypdf
+python-docx
+openpyxl
+qiniu
+
 # 可观测性（阶段 6）：OpenTelemetry 追踪 + structlog 结构化日志
 opentelemetry-api
 opentelemetry-sdk

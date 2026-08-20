@@ -42,6 +42,7 @@ async def chat(
         user_id=str(current_user.id),
         session_id=str(session.id),
         message=request.message,
+        attachments=request.attachments,
     )
     return ChatResponse(session_id=request.session_id, response=response)
 
@@ -71,6 +72,7 @@ async def chat_stream(
         user_id=str(current_user.id),
         session_id=str(session.id),
         message=request.message,
+        attachments=request.attachments,
     )
     return StreamingResponse(
         event_generator,

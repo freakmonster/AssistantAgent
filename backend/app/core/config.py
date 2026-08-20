@@ -34,6 +34,74 @@ class Settings(BaseSettings):
     MEDIA_MAX_SIZE: int = 100 * 1024 * 1024  # 单文件转存大小上限（字节，100MB）
     MEDIA_DOWNLOAD_TIMEOUT: int = 60  # 下载临时 URL 超时（秒）
 
+    # 文件上传与解析（阶段 9）
+    FILE_UPLOAD_STORAGE: str = "local"  # 存储实现：local（本地）/ qiniu（七牛云 Kodo）
+    FILE_UPLOAD_DIR: str = "file_uploads"  # local 模式存储根目录，与 MEDIA_UPLOAD_DIR 隔离，避免被 /media 静态挂载暴露
+    FILE_MAX_SIZE: int = 20 * 1024 * 1024  # 单文件大小上限（字节，20MB）
+    FILE_QUOTA_BYTES: int = 512 * 1024 * 1024  # 每用户总占用配额（字节，默认 512MB），超阈值触发清理最旧一半
+    FILE_GLOBAL_QUOTA_BYTES: int = 8 * 1024 * 1024 * 1024  # 全部用户累计写入上限（字节，8GB，七牛空间 10GB 留 2GB 余量），达到后拒绝新上传并触发全局清理
+    FILE_RETENTION_DAYS: int = 3  # 文件保留天数，超过即自动清理（定时任务每日执行）
+    FILE_PARSE_MODE: str = "transient"  # 解析链路开关：transient=即解析即删（默认，不转存原始文件）/ persist=转存存储后解析（切回七牛时用）
+    FILE_TEXT_MAX_CHARS: int = 12000  # 附件解析文本注入上下文前的单文件截断上限（字符），同时作为 LLM 压缩的触发阈值与目标长度
+    FILE_DOWNLOAD_TIMEOUT: int = 300  # persist 模式解析下载超时（秒），独立于 MEDIA_DOWNLOAD_TIMEOUT
+    FILE_DOWNLOAD_CHUNKS: int = 4  # persist 模式分片并发下载片数
+
+    # 文件附件 LLM 语义压缩（阶段 9 增强）
+    FILE_COMPRESS_ENABLED: bool = True  # 是否启用 LLM 压缩；关闭或失败时降级为字符截断
+    FILE_COMPRESS_MODEL: str = "deepseek-v4-flash"  # 压缩模型 id（DeepSeek 当前仅支持 deepseek-v4-pro / deepseek-v4-flash）
+    FILE_COMPRESS_BASE_URL: str = ""  # 压缩模型 base_url，空则回退 DEEPSEEK_BASE_URL
+    FILE_COMPRESS_API_KEY: str = ""  # 压缩模型 api_key，空则回退 DEEPSEEK_API_KEY
+    FILE_COMPRESS_CHARS_PER_TOKEN: int = 2  # 字符/token 换算比例（与 summarize_node 的 estimate_tokens 一致）
+    FILE_COMPRESS_WINDOW_RATIO: float = 0.5  # 单片安全上限 = 模型窗口 × 该比例，留出 prompt 与输出余量
+    FILE_COMPRESS_MAX_CHUNKS: int = 8  # 分片并发压缩的最大片数，防止极端文件产生过多并发
+    FILE_COMPRESS_TIMEOUT: int = 60  # 单次压缩 LLM 调用超时（秒），超时降级为字符截断；需小于 worker 任务超时（300s）
+    FILE_COMPRESS_MODEL_WINDOWS: dict[str, int] = {
+        # OpenAI
+        "gpt-5.6-sol": 1_050_000,
+        "gpt-5.4": 1_050_000,
+        "gpt-5.5": 1_000_000,
+        "gpt-5.4-mini": 400_000,
+        "gpt-4o": 128_000,
+        # Anthropic
+        "claude-opus-4.7": 1_000_000,
+        "claude-opus-4.8": 1_000_000,
+        "claude-sonnet-4.6": 1_000_000,
+        # Google
+        "gemini-3.1-pro": 2_000_000,
+        "gemini-2.5-pro": 1_000_000,
+        # DeepSeek（保留当前配置使用的兼容别名）
+        "deepseek-v4-pro": 1_000_000,
+        "deepseek-v4-flash": 1_000_000,  # DeepSeek V4 Flash
+        # 阿里云
+        "qwen-long": 10_000_000,
+        "qwen3.8-max": 1_000_000,
+        "qwen3.7-max": 1_000_000,
+        "qwen3.5-plus": 1_000_000,
+        # Meta
+        "llama-4-scout": 10_000_000,
+        # 月之暗面
+        "kimi-k3": 1_050_000,
+        "kimi-k2.6": 262_144,
+        # 腾讯、MiniMax 与智谱
+        "hy3": 256_000,
+        "hunyuan-hy3": 256_000,
+        "minimax-m3": 1_000_000,
+        "glm-5": 200_000,
+        "glm-5.2": 200_000,
+    }  # 模型 id -> 上下文窗口（tokens）；未收录模型回退 1_000_000
+
+    # 百度云 OCR（PP-OCRv6，扫描件 PDF 与图片识别）
+    BAIDU_OCR_ENABLED: bool = False  # 是否启用；关闭时扫描件/图片保持空文本（现状）
+    BAIDU_OCR_API_KEY: str = ""     # 百度智能云 API Key
+    BAIDU_OCR_SECRET_KEY: str = ""  # 百度智能云 Secret Key
+    BAIDU_OCR_MAX_PAGES: int = 20   # 单份扫描件 PDF 最多识别页数（逐页调用，控配额/耗时）
+
+    # 七牛云 Kodo（FILE_UPLOAD_STORAGE=qiniu 时必填）
+    QINIU_ACCESS_KEY: str = ""
+    QINIU_SECRET_KEY: str = ""
+    QINIU_BUCKET: str = ""  # 空间名
+    QINIU_DOMAIN: str = ""  # 下载域名（公开空间直出裸 URL），load 时用它拼接 URL
+
     # 魔搭可视化图表 MCP
     MODELSCOPE_TOKEN: str
     # 魔搭 api-inference 托管的各 MCP 服务地址（真实 URL 只存 .env，不写死在代码里）

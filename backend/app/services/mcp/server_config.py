@@ -23,7 +23,9 @@ def build_tavily_server(api_key: str) -> dict:
     """
     return {
         "transport": "streamable_http",
-        "url": f"https://mcp.tavily.com/mcp/?tavilyApiKey={api_key}",
+        "url": "https://mcp.tavily.com/mcp/",
+        # 密钥经 Authorization 头传递，避免出现在 URL 查询串中被日志/代理明文记录
+        "headers": {"Authorization": f"Bearer {api_key}"},
     }
 
 

@@ -116,3 +116,39 @@ export const userApi = {
     return request<User>('/users/me')
   },
 }
+
+// 文件上传响应（POST /api/v1/files）
+export interface FileUploadResponse {
+  file_id: string
+  task_id: string | null
+  status: string
+  filename: string
+}
+
+// 文件接口：上传走 multipart，不能复用 request()（其强制 JSON Content-Type）
+export const filesApi = {
+  async upload(file: File): Promise<FileUploadResponse> {
+    const form = new FormData()
+    form.append('file', file)
+    const res = await fetch(`${API_BASE}/files`, {
+      method: 'POST',
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+      body: form,
+    })
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`
+      try {
+        const body = await res.json()
+        detail = body.detail ?? JSON.stringify(body)
+      } catch {
+        detail = `HTTP ${res.status} ${res.statusText}`
+      }
+      throw new Error(detail)
+    }
+    return res.json() as Promise<FileUploadResponse>
+  },
+  // 获取文件公开访问 URL（历史附件展示/下载用）
+  async url(fileId: string): Promise<{ file_id: string; url: string; filename: string }> {
+    return request(`/files/${fileId}/url`)
+  },
+}

@@ -5,7 +5,13 @@
 `@tool` 装饰器依赖 docstring 生成工具描述与参数 schema。
 """
 from app.prompts.check import build_check_drift_prompt
+from app.prompts.file_compress import build_file_compress_prompt
 from app.prompts.system import SYSTEM_PROMPT
 from app.prompts.summarize import build_summarize_prompt
 
-__all__ = ["SYSTEM_PROMPT", "build_summarize_prompt", "build_check_drift_prompt"]
+__all__ = [
+    "SYSTEM_PROMPT",
+    "build_summarize_prompt",
+    "build_check_drift_prompt",
+    "build_file_compress_prompt",
+]

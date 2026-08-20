@@ -45,6 +45,7 @@ async def enqueue_agent_task(
         str(current_user.id),
         str(session.id),
         request.message,
+        request.attachments,
     )
     if job is None:
         raise HTTPException(

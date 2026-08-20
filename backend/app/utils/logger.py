@@ -17,6 +17,11 @@ def configure_logging(level: int = logging.INFO) -> None:
     # 先配置标准库根 logger，确保 structlog（stdlib LoggerFactory）有输出 handler
     logging.basicConfig(level=level, format="%(message)s", stream=sys.stdout)
 
+    # 降低第三方库日志级别：httpx / MCP SDK 会在 INFO 级打印每条 HTTP 请求与 SSE 重连，
+    # 导致启动后日志刷屏，这里统一降到 WARNING 只保留真正错误；应用自身 structlog 输出不受影响。
+    for _name in ("httpx", "httpcore", "mcp", "langchain_mcp_adapters"):
+        logging.getLogger(_name).setLevel(logging.WARNING)
+
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,

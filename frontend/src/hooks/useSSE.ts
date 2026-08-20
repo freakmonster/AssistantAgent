@@ -6,6 +6,12 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useTaskStore } from '../stores/taskStore'
 import type { ToolCall, ToolPayload } from '../types'
 
+// 发送消息时可携带的附件（file_id + 文件名）
+export interface SendAttachment {
+  file_id: string
+  filename: string
+}
+
 function genId(): string {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
     return crypto.randomUUID()
@@ -48,7 +54,7 @@ export function useSSE() {
   const pendingPairRef = useRef<{ userId: string; assistantId: string } | null>(null)
 
   const sendMessage = useCallback(
-    async (sessionId: string, message: string) => {
+    async (sessionId: string, message: string, attachments?: SendAttachment[]) => {
       // 重生成前清理上一次被暂停的半截（user + assistant 成对清掉）
       if (pendingPairRef.current) {
         removeMessage(pendingPairRef.current.assistantId)
@@ -64,6 +70,12 @@ export function useSSE() {
         id: userId,
         role: 'user',
         content: message,
+        // 附件以 file 类型挂到用户消息上，气泡用 AttachmentCard 渲染
+        attachments: (attachments ?? []).map((a) => ({
+          type: 'file' as const,
+          file_id: a.file_id,
+          filename: a.filename,
+        })),
         createdAt: Date.now(),
       })
       addMessage({
@@ -164,7 +176,11 @@ export function useSSE() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${getAuthToken() ?? ''}`,
           },
-          body: JSON.stringify({ session_id: sessionId, message }),
+          body: JSON.stringify({
+            session_id: sessionId,
+            message,
+            attachments: (attachments ?? []).map((a) => a.file_id),
+          }),
           signal: controller.signal,
         })
         if (!res.ok || !res.body) {

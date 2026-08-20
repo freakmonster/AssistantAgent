@@ -940,6 +940,26 @@ button {
   max-width: 360px;
 }
 
+/* 文件附件卡片：仅展示文件名（内容已作为解析文本注入对话上下文） */
+.attachment-card-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+  max-width: 100%;
+}
+
+.attachment-file-name {
+  font-size: 13px;
+  color: var(--input-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .task-list {
   padding: 0 24px 12px;
 }
@@ -1031,7 +1051,7 @@ button {
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  padding: 0 12px;
+  padding-left: 6px;
   background: var(--toolbar-bg); /* 工具栏背景色，与上半部分文字区区分 */
 }
 
@@ -1067,6 +1087,117 @@ button {
 .chat-input button:disabled {
   background: #898c9b;
   cursor: not-allowed;
+}
+
+/* 文件上传按钮：黑色回形针、透明背景 */
+.chat-input button.chat-upload-button {
+  margin-right: auto;
+  background: transparent;
+  color: #000;
+}
+
+/* 禁用时保持透明背景 */
+.chat-input button.chat-upload-button:disabled {
+  background: transparent;
+  color: #9ca3af;
+}
+
+/* 上传错误提示条：超限等，自动消失 */
+.chat-input-error-tip {
+  flex: none;
+  margin: 10px 12px 0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #dc2626;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+}
+
+/* 待发送附件 chip 列表：位于输入框上方，解析中/完成/失败三态 */
+.chat-input-attachments {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px 0;
+}
+
+/* 附件 chip：文件名 + 状态图标 + 移除按钮 */
+.chat-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 4px 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--toolbar-bg);
+  font-size: 12px;
+  color: var(--input-text);
+  transform: translateY(-5px);/* 向上移动 2px */
+}
+
+.chat-attachment-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 解析中：旋转小圆点 */
+.chat-attachment-spinner {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border: 2px solid var(--border);
+  border-top-color: var(--btn-text);
+  border-radius: 50%;
+  animation: chat-attachment-spin 0.8s linear infinite;
+}
+
+@keyframes chat-attachment-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 就绪：绿色对勾 */
+.chat-attachment-ready .chat-attachment-done {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+/* 失败：红色叉号 */
+.chat-attachment-failed {
+  border-color: #dc2626;
+}
+
+.chat-attachment-failed .chat-attachment-failed-icon {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+/* 移除按钮 */
+.chat-input button.chat-attachment-remove {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  margin: 0;
+
+  background: transparent;
+  color: #6b7280;
+  border: none;
+  border-radius: 50%;
+  font-size: 14px;
+  line-height: 1;
+
+  transform: translate(0px);
+}
+
+.chat-input button.chat-attachment-remove:hover {
+  background: transparent;
+  color: #111;
 }
 
 

@@ -22,6 +22,13 @@ export function AttachmentCard({ attachment }: AttachmentCardProps) {
       )
     case 'text':
       return <div className="attachment-card">{attachment.content ?? ''}</div>
+    case 'file':
+      // 文件附件：仅展示文件名（内容已作为解析文本注入对话上下文）
+      return (
+        <div className="attachment-card attachment-card-file">
+          <span className="attachment-file-name">{attachment.filename ?? '文件'}</span>
+        </div>
+      )
     default:
       return null
   }

@@ -12,6 +12,7 @@ from langgraph.config import get_store
 
 from app.core.config import settings
 from app.prompts import build_summarize_prompt
+from app.utils.llm import build_chat_llm
 
 
 def estimate_tokens(messages: list[BaseMessage]) -> int:
@@ -28,11 +29,10 @@ def estimate_tokens(messages: list[BaseMessage]) -> int:
 
 def _build_summary_llm() -> ChatOpenAI:
     """构建用于生成摘要的模型（温度 0，保证摘要稳定）。"""
-    return ChatOpenAI(
+    return build_chat_llm(
         model="deepseek-chat",
         api_key=settings.DEEPSEEK_API_KEY,
         base_url=settings.DEEPSEEK_BASE_URL,
-        temperature=0,
     )
 
 

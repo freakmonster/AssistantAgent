@@ -7,6 +7,7 @@ class ChatRequest(BaseModel):
 
     session_id: str
     message: str
+    attachments: list[str] = []  # 已上传文件的 file_id 列表（阶段 9）
 
 
 class ChatResponse(BaseModel):

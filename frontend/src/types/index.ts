@@ -29,9 +29,9 @@ export interface ToolPayload {
 }
 
 // 异步任务结果类型
-export type TaskResultType = 'text' | 'image' | 'video'
+export type TaskResultType = 'text' | 'image' | 'video' | 'file'
 
-// 消息附件（历史消息中的媒体，如视频/图片）
+// 消息附件（历史消息中的媒体/文件，如视频/图片/上传文件）
 export interface Attachment {
   type: TaskResultType
   url?: string
@@ -39,7 +39,18 @@ export interface Attachment {
   alt?: string
   content?: string
   prompt?: string
+  filename?: string // type=file 时的原始文件名
+  file_id?: string // type=file 时的文件 id
   [key: string]: unknown
+}
+
+// 待发送附件（上传中的本地状态：uploading → parsing → ready/failed）
+export interface PendingFile {
+  file_id: string
+  filename: string
+  status: 'uploading' | 'parsing' | 'ready' | 'failed'
+  task_id?: string
+  error?: string
 }
 
 // 异步任务结果（worker 完成时返回，见设计文档 16.3）

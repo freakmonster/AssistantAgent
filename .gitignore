@@ -85,3 +85,14 @@ start-tunnel.ps1
 
 install_ffmpeg.ps1
 start-tunnel.ps1
+
+# ---------- Electron 桌面版本 尝试----------
+node_modules/
+dist/
+out/
+desktop/
+
+
+eval/
+
+referenceDocument/

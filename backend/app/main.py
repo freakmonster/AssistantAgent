@@ -19,7 +19,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
-from app.api.v1.endpoints import auth, chat, sessions, tasks, users
+from app.api.v1.endpoints import auth, chat, files, sessions, tasks, users
 from app.core import redis as redis_pool_module
 from app.core.config import settings
 from app.models.database import Base, engine
@@ -159,6 +159,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(chat.router, prefix="/api/v1/chat", tags=["chat"])
 app.include_router(sessions.router, prefix="/api/v1/sessions", tags=["sessions"])
 app.include_router(tasks.router, prefix="/api/v1/tasks", tags=["tasks"])
+app.include_router(files.router, prefix="/api/v1/files", tags=["files"])
 
 # 挂载媒体静态目录：转存后的长期 URL（/media/...）直接访问本地文件
 # 目录不存在时自动创建，保证 /media 路由不 404

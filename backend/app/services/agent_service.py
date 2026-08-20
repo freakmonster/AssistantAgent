@@ -4,6 +4,7 @@
 """
 import asyncio
 import json
+import uuid
 from datetime import datetime, timezone
 from typing import Any, AsyncGenerator
 
@@ -14,6 +15,7 @@ from app.graph.agent import get_agent
 from app.models.database import async_session_factory
 from app.models.message import Message
 from app.models.session import Session
+from app.services.file_service import FileService
 
 
 class AgentService:
@@ -35,26 +37,54 @@ class AgentService:
         }
 
     async def run_agent_sync(
-        self, thread_id: str, user_id: str, session_id: str, message: str
+        self,
+        thread_id: str,
+        user_id: str,
+        session_id: str,
+        message: str,
+        attachments: list[str] | None = None,
     ) -> str:
         """非流式执行 Agent，返回最终回答文本。"""
         config = self._build_config(thread_id, user_id, session_id)
-        inputs = {"messages": [{"role": "user", "content": message}]}
+        inputs = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": await self._resolve_attachments(
+                        user_id, attachments or [], message
+                    ),
+                }
+            ]
+        }
         result = await self.agent.ainvoke(inputs, config=config)
         messages = result.get("messages", [])
         if not messages:
             return ""
-        await self._persist_messages(thread_id, message, messages)
+        await self._persist_messages(thread_id, user_id, message, messages, attachments or [])
         last = messages[-1]
         content = getattr(last, "content", "")
         return content if isinstance(content, str) else str(content)
 
     async def stream_agent_response(
-        self, thread_id: str, user_id: str, session_id: str, message: str
+        self,
+        thread_id: str,
+        user_id: str,
+        session_id: str,
+        message: str,
+        attachments: list[str] | None = None,
     ) -> AsyncGenerator[str, None]:
         """流式执行 Agent，生成 SSE 事件。"""
         config = self._build_config(thread_id, user_id, session_id)
-        inputs = {"messages": [{"role": "user", "content": message}]}
+        inputs = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": await self._resolve_attachments(
+                        user_id, attachments or [], message
+                    ),
+                }
+            ]
+        }
         try:
             # 主流程总超时（阶段 5）
             async with asyncio.timeout(settings.MAIN_FLOW_TIMEOUT):
@@ -81,17 +111,76 @@ class AgentService:
             state = await self.agent.aget_state(config)
             await self._persist_messages(
                 config["configurable"]["thread_id"],
+                user_id,
                 message,
                 state.values.get("messages", []),
+                attachments or [],
             )
             yield self._sse("done", {"status": "completed"})
 
+    async def _resolve_attachments(
+        self, user_id: str, attachments: list[str], message: str
+    ) -> str:
+        """把附件文件解析文本拼接到用户消息，构造 LLM 输入。
+
+        Args:
+            user_id: 当前用户 id（字符串）。
+            attachments: 附件 file_id 列表。
+            message: 用户原始问题。
+
+        Returns:
+            拼接后的消息内容：附件文本在前，用户问题在后。
+        """
+        if not attachments:
+            return message
+
+        file_ids = []
+        for aid in attachments:
+            try:
+                file_ids.append(uuid.UUID(aid))
+            except ValueError:
+                continue
+
+        async with async_session_factory() as db:
+            files = await FileService().load_texts(uuid.UUID(user_id), file_ids, db)
+
+        blocks = []
+        for f in files:
+            blocks.append(
+                f"【用户提供的文件内容：{f['filename']}】\n"
+                f"{self._truncate_text(f['text'], settings.FILE_TEXT_MAX_CHARS)}"
+            )
+        if not blocks:
+            return message
+        attachment_text = "\n---\n".join(blocks)
+        # 设计文档 14.5.4：附件解析文本 + 用户问题，两者一并注入 LLM
+        return f"{attachment_text}\n\n用户问题：\n{message}"
+
+    @staticmethod
+    def _truncate_text(text: str, max_chars: int) -> str:
+        """注入 LLM 前截断超长解析文本，避免撑爆模型 context。
+
+        超过 max_chars 时保留前 3/4 + 尾部 1/4，中间以省略提示替代，
+        兼顾开头概述与结尾结论，同时保留完整长度信息供模型感知。
+        """
+        if max_chars <= 0 or len(text) <= max_chars:
+            return text
+        head = text[: max_chars * 3 // 4]
+        tail = text[-(max_chars // 4):]
+        return f"{head}\n\n……（内容过长已截断，完整共 {len(text)} 字符）……\n\n{tail}"
+
     async def _persist_messages(
-        self, thread_id: str, user_message: str, messages: list
+        self,
+        thread_id: str,
+        user_id: str,
+        user_message: str,
+        messages: list,
+        attachments: list[str] | None = None,
     ) -> None:
         """将本次用户消息与最终 assistant 回答写入 messages 表。
 
         使用独立 DB session（不复用请求级 db，因为 SSE 流生命周期更长）。
+        attachments 为用户消息携带的附件 file_id 列表，落库为附件元数据。
         """
         final_answer = ""
         tool_calls: list | None = None
@@ -103,6 +192,24 @@ class AgentService:
                 final_answer = content
             if getattr(msg, "tool_calls", None):
                 tool_calls = self._serialize_tool_calls(msg.tool_calls)
+
+        # 用户消息附件元数据：file_id + filename（用于前端气泡展示）
+        attachment_meta = []
+        if attachments:
+            async with async_session_factory() as db:
+                file_ids = []
+                for aid in attachments:
+                    try:
+                        file_ids.append(uuid.UUID(aid))
+                    except ValueError:
+                        continue
+                files = await FileService().load_texts(
+                    uuid.UUID(user_id), file_ids, db
+                )
+            attachment_meta = [
+                {"type": "file", "file_id": str(f["file_id"]), "filename": f["filename"]}
+                for f in files
+            ]
 
         async with async_session_factory() as session:
             db_session = await session.scalar(
@@ -121,7 +228,12 @@ class AgentService:
             db_session.updated_at = datetime.now(timezone.utc)
 
             session.add(
-                Message(session_id=session_id, role="user", content=user_message)
+                Message(
+                    session_id=session_id,
+                    role="user",
+                    content=user_message,
+                    attachments=attachment_meta or None,
+                )
             )
             session.add(
                 Message(
