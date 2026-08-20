@@ -92,9 +92,13 @@ class Settings(BaseSettings):
 
     # 百度云 OCR（PP-OCRv6，扫描件 PDF 与图片识别）
     BAIDU_OCR_ENABLED: bool = False  # 是否启用；关闭时扫描件/图片保持空文本（现状）
-    BAIDU_OCR_API_KEY: str = ""     # 百度智能云 API Key
-    BAIDU_OCR_SECRET_KEY: str = ""  # 百度智能云 Secret Key
+    BAIDU_API_KEY: str = ""         # 百度智能云 API Key（OCR 与 ASR 共用）
+    BAIDU_SECRET_KEY: str = ""      # 百度智能云 Secret Key（OCR 与 ASR 共用）
     BAIDU_OCR_MAX_PAGES: int = 20   # 单份扫描件 PDF 最多识别页数（逐页调用，控配额/耗时）
+
+    # 百度云 ASR（短语音识别极速版；AK/SK 复用上方 BAIDU_API_KEY/BAIDU_SECRET_KEY）
+    BAIDU_ASR_DEV_PID: int = 80001   # 短语音识别极速版模型
+    BAIDU_ASR_MAX_SECONDS: int = 30  # 单次语音输入最长秒数（前后端双层限制）
 
     # 七牛云 Kodo（FILE_UPLOAD_STORAGE=qiniu 时必填）
     QINIU_ACCESS_KEY: str = ""

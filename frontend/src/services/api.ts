@@ -152,3 +152,32 @@ export const filesApi = {
     return request(`/files/${fileId}/url`)
   },
 }
+
+// 语音转写响应（POST /api/v1/audio/transcribe）
+export interface TranscribeResponse {
+  text: string
+}
+
+// 语音接口：上传走 multipart，不能复用 request()（其强制 JSON Content-Type）
+export const audioApi = {
+  async transcribe(blob: Blob): Promise<TranscribeResponse> {
+    const form = new FormData()
+    form.append('file', blob, 'recording.webm')
+    const res = await fetch(`${API_BASE}/audio/transcribe`, {
+      method: 'POST',
+      headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+      body: form,
+    })
+    if (!res.ok) {
+      let detail = `HTTP ${res.status}`
+      try {
+        const body = await res.json()
+        detail = body.detail ?? JSON.stringify(body)
+      } catch {
+        detail = `HTTP ${res.status} ${res.statusText}`
+      }
+      throw new Error(detail)
+    }
+    return res.json() as Promise<TranscribeResponse>
+  },
+}

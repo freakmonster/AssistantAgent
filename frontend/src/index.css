@@ -966,6 +966,7 @@ button {
 
 /* 输入区 */
 .chat-input {
+  position: relative; /* 供气泡提示绝对定位用 */
   border-top: none;
   background: transparent; /* 输入区背景透明 */
   padding: 3px 134px 17px;
@@ -1091,7 +1092,6 @@ button {
 
 /* 文件上传按钮：黑色回形针、透明背景 */
 .chat-input button.chat-upload-button {
-  margin-right: auto;
   background: transparent;
   color: #000;
 }
@@ -1100,6 +1100,108 @@ button {
 .chat-input button.chat-upload-button:disabled {
   background: transparent;
   color: #9ca3af;
+}
+
+/* 语音输入按钮：麦克风图标，透明背景；录音中红色高亮 */
+.chat-input button.chat-voice-button {
+  margin-right: auto; /* 紧贴右侧的上传按钮，把剩余空间推给发送按钮 */
+  background: transparent;
+  color: #000;
+}
+.chat-input button.chat-voice-button.recording {
+  margin-right: 0; /* 录音时让出空间给倒计时进度条 */
+  color: #dc2626;
+}
+.chat-input button.chat-voice-button:disabled {
+  background: transparent;
+  color: #9ca3af;
+}
+
+/* 录音倒计时指示器：进度条（随剩余时间缩短）+ 秒数 */
+.chat-recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1; /* 占满语音按钮与发送按钮之间的剩余空间 */
+  min-width: 80px;
+  margin-right: 8px;
+  overflow: hidden;
+}
+
+/* 进度条轨道 */
+.chat-recording-track {
+  position: relative;
+  flex: 1;
+  max-width: 100px; /* 限制长线最大长度，避免过长 */
+  height: 4px;
+  border-radius: 2px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+/* 进度条填充：红色，宽度随剩余秒数线性缩短 */
+.chat-recording-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: #dc2626;
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
+/* 倒计时数字 */
+.chat-recording-countdown {
+  flex: none;
+  min-width: 26px;
+  text-align: center;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #dc2626;
+}
+
+/* 气泡提示：在输入框上方浮现，3 秒后渐隐 */
+.chat-input-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 100%;
+  margin-bottom: 10px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.72);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  animation: chat-toast-fade 3s ease-in-out forwards;
+}
+
+/* 气泡提示图标：黄色圆形底 + 白色感叹号 */
+.chat-toast-icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f59e0b;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* 气泡渐隐动画：出现 → 停留 → 淡去（共 3 秒） */
+@keyframes chat-toast-fade {
+  0% { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  12% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  80% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-6px); }
 }
 
 /* 上传错误提示条：超限等，自动消失 */

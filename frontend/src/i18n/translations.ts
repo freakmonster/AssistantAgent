@@ -40,6 +40,10 @@ const zh = {
     copy: '复制',
     copied: '已复制',
     thinking: '正在思考…',
+    startRecord: '语音输入',
+    stopRecord: '停止录音',
+    transcribing: '转写中…',
+    noSpeech: '未识别到文字',
   },
   tool: {
     call: '调用',
@@ -147,6 +151,10 @@ const en: TranslationKey = {
     copy: 'Copy',
     copied: 'Copied',
     thinking: 'Thinking…',
+    startRecord: 'Voice input',
+    stopRecord: 'Stop recording',
+    transcribing: 'Transcribing…',
+    noSpeech: 'No speech detected',
   },
   tool: {
     call: 'Calling',

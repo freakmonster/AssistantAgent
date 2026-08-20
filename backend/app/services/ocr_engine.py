@@ -187,12 +187,12 @@ def get_ocr_engine() -> OCREngine | None:
     _engine_inited = True
     if not settings.BAIDU_OCR_ENABLED:
         return None
-    if not settings.BAIDU_OCR_API_KEY or not settings.BAIDU_OCR_SECRET_KEY:
+    if not settings.BAIDU_API_KEY or not settings.BAIDU_SECRET_KEY:
         logger.warning("百度 OCR 已启用但缺少 API Key/Secret Key，扫描件将保持空文本")
         return None
     _engine = BaiduPPOCREngine(
-        settings.BAIDU_OCR_API_KEY,
-        settings.BAIDU_OCR_SECRET_KEY,
+        settings.BAIDU_API_KEY,
+        settings.BAIDU_SECRET_KEY,
         settings.BAIDU_OCR_MAX_PAGES,
     )
     return _engine

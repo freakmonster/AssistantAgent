@@ -1,8 +1,9 @@
 // 输入区：外轮廓内分上下两部分（文字输入 + 底部工具栏），发送触发 SSE 流式对话。
 // 支持文件上传：选择 → 上传 → 轮询解析状态（ready 后才可发送），附件以 chip 展示。
 import { useRef, useState, type ChangeEvent } from 'react'
+import { AudioOutlined } from '@ant-design/icons'
 import { useSSE } from '../../hooks/useSSE'
-import { filesApi, taskApi } from '../../services/api'
+import { audioApi, filesApi, taskApi } from '../../services/api'
 import { useMessageStore } from '../../stores/messageStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useTranslation } from '../../stores/settingsStore'
@@ -31,11 +32,16 @@ const MAX_TEXTAREA_HEIGHT = 600
 // 解析状态轮询间隔（毫秒）
 const POLL_INTERVAL_MS = 2000
 
+// 语音录音最大时长（秒），与后端 30s 双层限制一致
+const MAX_RECORD_SECONDS = 30
+
 export function ChatInput({ sessionId }: ChatInputProps) {
   const [text, setText] = useState('')
   const [pendingFiles, setPendingFiles] = useState<PendingFile[]>([])
   // 上传超限等错误提示（自动消失的红色提示条）
   const [errorTip, setErrorTip] = useState<string | null>(null)
+  // 气泡提示（输入框上方浮现，如「未识别到文字」），与错误提示条区分
+  const [toast, setToast] = useState<string | null>(null)
   const streaming = useMessageStore((s) => s.streaming)
   const ensureSession = useSessionStore((s) => s.ensureSession)
   const { t } = useTranslation()
@@ -46,12 +52,29 @@ export function ChatInput({ sessionId }: ChatInputProps) {
   const sendingRef = useRef(false)
   // 错误提示自动消失的定时器句柄
   const errorTipTimer = useRef<number | null>(null)
+  // 气泡提示自动消失的定时器句柄
+  const toastTimer = useRef<number | null>(null)
+  // 语音录音相关状态与引用
+  const [recording, setRecording] = useState(false)
+  const [recordingRemain, setRecordingRemain] = useState(MAX_RECORD_SECONDS)
+  const [transcribing, setTranscribing] = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const recordCountdownRef = useRef<number | null>(null)
+  const remainingRef = useRef(MAX_RECORD_SECONDS)
 
   // 显示错误提示，5 秒后自动清除（后出现的提示会覆盖先前的定时器）
   const showErrorTip = (msg: string) => {
     setErrorTip(msg)
     if (errorTipTimer.current) window.clearTimeout(errorTipTimer.current)
     errorTipTimer.current = window.setTimeout(() => setErrorTip(null), 5000)
+  }
+
+  // 显示气泡提示（输入框上方浮现，3 秒后渐隐消失）
+  const showToast = (msg: string) => {
+    setToast(msg)
+    if (toastTimer.current) window.clearTimeout(toastTimer.current)
+    toastTimer.current = window.setTimeout(() => setToast(null), 3000)
   }
 
   // 文字区高度随行数动态增高，最高 600px
@@ -155,6 +178,82 @@ export function ChatInput({ sessionId }: ChatInputProps) {
     }
   }
 
+  // 回填转写文本到输入框（追加），并同步调整 textarea 高度
+  const fillText = (transcribed: string) => {
+    setText((prev) => (prev ? prev + transcribed : transcribed))
+    window.setTimeout(() => {
+      const el = textareaRef.current
+      if (el) {
+        el.style.height = 'auto'
+        el.style.height = `${Math.min(el.scrollHeight, MAX_TEXTAREA_HEIGHT)}px`
+      }
+    }, 0)
+  }
+
+  // 停止录音：主动停止与 30s 自动停止共用（触发 onstop 提交转写）
+  const stopRecording = () => {
+    const rec = mediaRecorderRef.current
+    if (rec && rec.state !== 'inactive') rec.stop()
+    if (recordCountdownRef.current) {
+      window.clearInterval(recordCountdownRef.current)
+      recordCountdownRef.current = null
+    }
+    setRecording(false)
+  }
+
+  // 开始录音：申请麦克风 → MediaRecorder 采集 → 30s 自动停止
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const rec = new MediaRecorder(stream)
+      mediaRecorderRef.current = rec
+      chunksRef.current = []
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data)
+      }
+      rec.onstop = async () => {
+        // 停止所有音轨，释放麦克风
+        stream.getTracks().forEach((track) => track.stop())
+        const blob = new Blob(chunksRef.current, {
+          type: rec.mimeType || 'audio/webm',
+        })
+        if (blob.size === 0) return
+        setTranscribing(true)
+        try {
+          const { text } = await audioApi.transcribe(blob)
+          if (!text) {
+            showToast(t.chat.noSpeech)
+          } else {
+            fillText(text)
+          }
+        } catch (err) {
+          showErrorTip(err instanceof Error ? err.message : '语音转写失败')
+        } finally {
+          setTranscribing(false)
+        }
+      }
+      rec.start()
+      setRecording(true)
+      // 重置倒计时并每秒递减，到 0 自动停止（与后端 30s 双层限制一致）
+      remainingRef.current = MAX_RECORD_SECONDS
+      setRecordingRemain(MAX_RECORD_SECONDS)
+      recordCountdownRef.current = window.setInterval(() => {
+        remainingRef.current -= 1
+        setRecordingRemain(Math.max(remainingRef.current, 0))
+        if (remainingRef.current <= 0) stopRecording()
+      }, 1000)
+    } catch {
+      showErrorTip('无法访问麦克风，请检查浏览器权限')
+    }
+  }
+
+  // 语音按钮点击：未录音→开始，已录音→停止（提交转写）
+  const handleVoiceClick = () => {
+    if (transcribing) return
+    if (recording) stopRecording()
+    else startRecording()
+  }
+
   const handleSend = async () => {
     const content = text.trim()
     // 存在未就绪附件（上传中/解析中/失败）时禁用发送
@@ -188,6 +287,13 @@ export function ChatInput({ sessionId }: ChatInputProps) {
 
   return (
     <div className="chat-input">
+      {/* 气泡提示：输入框上方浮现，3 秒后渐隐 */}
+      {toast && (
+        <div className="chat-input-toast">
+          <span className="chat-toast-icon">!</span>
+          {toast}
+        </div>
+      )}
       <div className="chat-input-box">
         {/* 上传错误提示条：超限等，自动消失 */}
         {errorTip && <div className="chat-input-error-tip">{errorTip}</div>}
@@ -246,6 +352,27 @@ export function ChatInput({ sessionId }: ChatInputProps) {
               <path d="M16.5 6v11.5a4 4 0 01-8 0V5a2.5 2.5 0 015 0v10.5a1 1 0 01-2 0V6H10v9.5a2.5 2.5 0 005 0V5a4 4 0 00-8 0v12.5a5.5 5.5 0 0011 0V6h-1.5z" />
             </svg>
           </button>
+          <button
+            className={`chat-voice-button${recording ? ' recording' : ''}`}
+            onClick={handleVoiceClick}
+            disabled={streaming || transcribing}
+            aria-label={recording ? t.chat.stopRecord : t.chat.startRecord}
+            title={recording ? t.chat.stopRecord : t.chat.startRecord}
+          >
+            <AudioOutlined style={{ fontSize: 16 }} />
+          </button>
+          {/* 录音倒计时：进度条随剩余时间缩短 + 秒数 */}
+          {recording && (
+            <div className="chat-recording-indicator">
+              <span className="chat-recording-track">
+                <span
+                  className="chat-recording-fill"
+                  style={{ width: `${(recordingRemain / MAX_RECORD_SECONDS) * 100}%` }}
+                />
+              </span>
+              <span className="chat-recording-countdown">{recordingRemain}s</span>
+            </div>
+          )}
           {/* 隐藏的文件选择框（accept 限定可上传类型） */}
           <input
             ref={fileInputRef}
