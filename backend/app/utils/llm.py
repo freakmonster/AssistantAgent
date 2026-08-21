@@ -52,6 +52,7 @@ class ModelRoute:
     base_url: str
     api_key: str
     fallback: str = ""
+    hidden: bool = False  # 为 True 时不暴露给前端模型列表（仅后端内部可用，如备用模型）
 
 
 # 未配置 MODEL_ROUTES 时的默认路由：DeepSeek 两档，端点与密钥按需回退
@@ -90,6 +91,7 @@ def get_model_routes() -> list[ModelRoute]:
                 base_url=str(item.get("base_url") or ""),
                 api_key=str(item.get("api_key") or ""),
                 fallback=str(item.get("fallback") or ""),
+                hidden=bool(item.get("hidden") or False),
             )
         )
     return result
@@ -97,7 +99,7 @@ def get_model_routes() -> list[ModelRoute]:
 
 def list_available_models() -> list[dict]:
     """对外返回可选模型列表（仅 id + name，不暴露密钥）。"""
-    return [{"id": r.id, "name": r.name} for r in get_model_routes()]
+    return [{"id": r.id, "name": r.name} for r in get_model_routes() if not r.hidden]
 
 
 def resolve_model(model_id: str | None) -> ModelRoute:

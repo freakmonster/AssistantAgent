@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     ZHIPU_API_KEY: str
     ZHIPU_BASE_URL: str = "https://open.bigmodel.cn"
 
+    # OpenRouter（聚合多家模型供应商的统一网关）
+    OPENROUTER_API_KEY: str = ""
+
     # 媒体转存（阶段 5：URL 真实转存，方案 A：StaticFiles 挂载本地目录）
     MEDIA_UPLOAD_DIR: str = "uploads"  # 本地存储根目录（相对 backend 工作目录）
     MEDIA_URL_PREFIX: str = "/media"  # 静态访问 URL 前缀，需与 main.py 挂载保持一致
