@@ -10,6 +10,10 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
+# 安装 ffmpeg（ASR 音频转码依赖，asr_engine.py 通过 subprocess 调用）
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 # 先拷贝依赖清单并安装，利用 Docker 层缓存加速重复构建
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt

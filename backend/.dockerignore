@@ -1,0 +1,29 @@
+# 后端构建上下文排除清单：避免将本地大目录/敏感文件发送到 Docker daemon
+
+# Python 虚拟环境与缓存
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 密钥与本地配置（容器运行时经 compose env_file 注入，不进镜像）
+.env
+.env.*
+!.env.example
+
+# 运行时产物（媒体/文件转存，由 named volume 挂载）
+uploads/
+file_uploads/
+media/
+
+# 日志
+*.log
+logs/
+
+# 测试与临时文件
+tests/
+scripts/
+_tmp_verify*.py

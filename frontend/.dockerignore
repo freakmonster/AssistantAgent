@@ -1,0 +1,17 @@
+# 前端构建上下文排除清单：避免将 node_modules/dist 等大目录发送到 Docker daemon
+
+# 依赖与构建产物（镜像内 npm ci / npm run build 会重新生成）
+node_modules/
+dist/
+dist-ssr/
+.vite/
+*.tsbuildinfo
+
+# 本地配置与密钥
+.env
+.env.local
+.env.*.local
+
+# 日志
+*.log
+npm-debug.log*
