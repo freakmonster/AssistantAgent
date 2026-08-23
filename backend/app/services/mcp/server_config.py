@@ -317,6 +317,30 @@ def build_polygon_server(api_key: str = "") -> dict:
     }
 
 
+def build_calculator_server() -> dict:
+    """构造 calculator-mcp-server 的 Streamable HTTP 连接配置。
+
+    公开第三方 MCP 服务（https://calculator.caseyjhand.com/mcp），**无需鉴权**。
+    提供 1 个 calculate 工具，基于 math.js 支持三种操作（实测确认）：
+    - evaluate：算术、三角函数、对数、统计、矩阵、复数等计算
+    - simplify：代数表达式符号化简（2x + 3x -> 5 * x）
+    - derivative：符号求导（3x^2 + 2x + 1 -> 6 * x + 2）
+
+    注意（实测发现）：
+    - expression 为必填参数；operation 省略时默认 evaluate。
+    - 单次调用约 0.3s，属同步工具，走默认 MCP_TOOL_TIMEOUT。
+    - 服务端计算能力有限（基于 math.js），超纲表达式会返回错误信息，
+      工具 description 已提示 LLM 优先用于数值/符号计算校验。
+
+    Returns:
+        langchain-mcp-adapters 可识别的 streamable_http 连接配置字典。
+    """
+    return {
+        "transport": "streamable_http",
+        "url": "https://calculator.caseyjhand.com/mcp",
+    }
+
+
 def build_filesystem_server(allowed_root: str) -> dict:
     """构造本地文件系统 MCP Server 的 stdio 连接配置。
 

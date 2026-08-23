@@ -28,6 +28,7 @@ from app.services.mcp.server_config import (
     build_amap_server,
     build_arxiv_server,
     build_bazi_server,
+    build_calculator_server,
     build_chart_server,
     build_deepwiki_server,
     build_document_generator_server,
@@ -105,6 +106,7 @@ async def lifespan(app: FastAPI):
             "bazi": build_bazi_server(settings.MODELSCOPE_TOKEN),
             "qwen_video": build_qwen_video_server(settings.MODELSCOPE_TOKEN),
             "polygon": build_polygon_server(settings.POLYGON_API_KEY),
+            "calculator": build_calculator_server(),
         }
     )
     # 视频理解单次调用约 10~20s，单独调大超时（默认 MCP 30s 不够）

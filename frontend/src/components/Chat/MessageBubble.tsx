@@ -2,7 +2,10 @@
 import { CopyOutlined } from '@ant-design/icons'
 import { useRef, useState } from 'react'
 import ReactMarkdown from 'react-markdown'
+import 'katex/dist/katex.min.css'
+import rehypeKatex from 'rehype-katex'
 import remarkGfm from 'remark-gfm'
+import remarkMath from 'remark-math'
 import { useTranslation } from '../../stores/settingsStore'
 import { useTaskStore } from '../../stores/taskStore'
 import type { ChatMessage } from '../../types'
@@ -90,7 +93,12 @@ export function MessageBubble({ message, streaming }: MessageBubbleProps) {
             {isUser ? (
               <span>{message.content}</span>
             ) : (
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                // throwOnError: false —— LLM 偶发输出 KaTeX 不支持的语法时，
+                // 该公式以原始文本显示（红色），避免整条消息渲染崩溃
+                rehypePlugins={[[rehypeKatex, { throwOnError: false }]]}
+              >
                 {renderAssistantContent(message.content)}
               </ReactMarkdown>
             )}
