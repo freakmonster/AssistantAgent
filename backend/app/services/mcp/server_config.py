@@ -286,6 +286,37 @@ def build_qwen_video_server(token: str) -> dict:
     }
 
 
+def build_polygon_server(api_key: str = "") -> dict:
+    """构造 Polygon.io（Pipeworx 网关托管）MCP Server 的 Streamable HTTP 连接配置。
+
+    提供金融数据工具（tickers、aggregates、daily_open_close、news 等 12 个），
+    实为 Massive（原 Polygon.io）数据源。支持两种鉴权模式（实测确认）：
+    - 平台托管模式（推荐）：无需任何请求头，直接握手即可（本函数默认）。
+    - 自带密钥模式：在 URL 后追加 ?_apiKey=KEY（通过 POLYGON_API_KEY 注入）。
+
+    注意（实测发现）：
+    - 该网关实际暴露 43 个工具，其中 31 个是 Pipeworx 平台通用工具
+      （ask_pipeworx、deep_research、polymarket 等），与金融数据无关，已在
+      main.py 通过 mcp_host.filter_server_tools 按白名单过滤，只暴露 12 个
+      Polygon 数据工具。
+    - 免费套餐限制 5 次/分钟，工具描述已提示 LLM 克制调用。
+    - 单次调用约 0.2~4s，属同步工具，走默认 MCP_TOOL_TIMEOUT。
+
+    Args:
+        api_key: Polygon.io API 密钥，非空时启用自带密钥模式；空则平台托管模式。
+
+    Returns:
+        langchain-mcp-adapters 可识别的 streamable_http 连接配置字典。
+    """
+    url = "https://gateway.pipeworx.io/polygon-io/mcp"
+    if api_key:
+        url = f"{url}?_apiKey={api_key}"
+    return {
+        "transport": "streamable_http",
+        "url": url,
+    }
+
+
 def build_filesystem_server(allowed_root: str) -> dict:
     """构造本地文件系统 MCP Server 的 stdio 连接配置。
 

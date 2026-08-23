@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # OpenRouter（聚合多家模型供应商的统一网关）
     OPENROUTER_API_KEY: str = ""
 
+    # 飞书机器人接入（企业自建应用，长连接模式；留空则启动时跳过飞书服务）
+    LARK_APP_ID: str = ""
+    LARK_APP_SECRET: str = ""
+
     # 媒体转存（阶段 5：URL 真实转存，方案 A：StaticFiles 挂载本地目录）
     MEDIA_UPLOAD_DIR: str = "uploads"  # 本地存储根目录（相对 backend 工作目录）
     MEDIA_URL_PREFIX: str = "/media"  # 静态访问 URL 前缀，需与 main.py 挂载保持一致
@@ -132,6 +136,10 @@ class Settings(BaseSettings):
     MODELSCOPE_DOCUMENT_GENERATOR_URL: str
     MODELSCOPE_BAZI_URL: str
     MODELSCOPE_QWEN_VIDEO_URL: str
+
+    # Polygon.io（Pipeworx 网关托管）MCP：平台托管模式无需密钥；
+    # 如需自带密钥，填写后自动在 URL 后追加 ?_apiKey=KEY（免费套餐 5 次/分钟）Massive Key
+    POLYGON_API_KEY: str = "qfdABt2HmqWKHhvwsYZBKLefekn_u12b"
 
     # 会话压缩（上下文达到阈值时用「摘要 + 最近窗口」替换早期消息）
     SUMMARIZE_TOKEN_THRESHOLD: int = 700_000  # 触发压缩的 token 阈值（1M 窗口的 70%）

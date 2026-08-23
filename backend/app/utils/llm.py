@@ -9,9 +9,35 @@ import os
 import re
 from dataclasses import dataclass
 
+import langchain_openai.chat_models.base as _lc_base
+from langchain_core.messages import AIMessage
 from langchain_openai import ChatOpenAI
 
 from app.core.config import settings
+
+
+# —— DeepSeek thinking 模式兼容补丁 ——
+# langchain_openai 的消息转换函数会丢弃 additional_kwargs 中的 reasoning_content
+# （思考内容）。DeepSeek V4 Pro 开启 thinking 模式后，多轮对话必须把历史
+# assistant 消息的 reasoning_content 原样回传，否则 API 返回 400：
+#   The `reasoning_content` in the thinking mode must be passed back to the API.
+# 这里对模块级转换函数做一次补丁，将 reasoning_content 带回请求体。
+# 仅当消息确实携带 reasoning_content 时生效，不影响其他模型（它们不会产生该字段）。
+_ORIG_CONVERT_MESSAGE_TO_DICT = _lc_base._convert_message_to_dict
+
+
+def _convert_message_to_dict_patched(message, api="chat/completions"):
+    """转换 LangChain 消息为 OpenAI 格式，并保留 DeepSeek 思考内容。"""
+    msg_dict = _ORIG_CONVERT_MESSAGE_TO_DICT(message, api)
+    if (
+        isinstance(message, AIMessage)
+        and message.additional_kwargs.get("reasoning_content")
+    ):
+        msg_dict["reasoning_content"] = message.additional_kwargs["reasoning_content"]
+    return msg_dict
+
+
+_lc_base._convert_message_to_dict = _convert_message_to_dict_patched
 
 
 def build_chat_llm(

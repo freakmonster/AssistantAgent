@@ -35,6 +35,7 @@ from app.services.mcp.server_config import (
     build_flight_compare_server,
     build_food_server,
     build_leetcode_server,
+    build_polygon_server,
     build_qwen_video_server,
     build_t12306_server,
     build_tavily_server,
@@ -42,6 +43,7 @@ from app.services.mcp.server_config import (
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.propagate import get_global_textmap
 
+from app.services.feishu_service import feishu_service
 from app.services.memory_service import memory_service
 from app.utils import logger as app_logger
 from app.utils.rate_limit import limiter
@@ -67,6 +69,26 @@ async def lifespan(app: FastAPI):
             text("ALTER TABLE sessions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ")
         )
     await memory_service.initialize()
+    # Polygon.io 网关实际暴露 43 个工具（含 31 个 Pipeworx 平台通用工具），
+    # 按白名单只暴露 12 个金融数据工具，避免撑大 LLM 上下文并干扰工具选择。
+    # 注意：须在 initialize 之前调用，过滤器才会作用于本次工具注册
+    mcp_host.filter_server_tools(
+        "polygon",
+        [
+            "tickers",
+            "ticker_details",
+            "aggregates",
+            "daily_open_close",
+            "previous_close",
+            "grouped_daily",
+            "news",
+            "splits",
+            "dividends",
+            "market_holidays",
+            "market_status",
+            "exchanges",
+        ],
+    )
     await mcp_host.initialize(
         {
             "tavily": build_tavily_server(settings.TAVILY_API_KEY),
@@ -82,6 +104,7 @@ async def lifespan(app: FastAPI):
             "document_generator": build_document_generator_server(settings.MODELSCOPE_TOKEN),
             "bazi": build_bazi_server(settings.MODELSCOPE_TOKEN),
             "qwen_video": build_qwen_video_server(settings.MODELSCOPE_TOKEN),
+            "polygon": build_polygon_server(settings.POLYGON_API_KEY),
         }
     )
     # 视频理解单次调用约 10~20s，单独调大超时（默认 MCP 30s 不够）
@@ -93,6 +116,8 @@ async def lifespan(app: FastAPI):
         "注意：text 与 video_url 均为必填参数。若用户只提供了视频链接而未提出具体问题，"
         "请在 text 中自动补充通用解读指令（例如：请概括这段视频的主要内容，提取关键信息）。",
     )
+    # 飞书机器人长连接（未配置 LARK_APP_ID/SECRET 时自动跳过）
+    await feishu_service.start()
     # ARQ 任务队列连接池（供任务入队与状态查询使用）
     app.state.redis_pool = await create_pool(
         RedisSettings.from_dsn(settings.REDIS_URL)
@@ -102,6 +127,7 @@ async def lifespan(app: FastAPI):
     await app.state.redis_pool.aclose()
     await mcp_host.close()
     await memory_service.close()
+    await feishu_service.stop()
     await engine.dispose()
 
 

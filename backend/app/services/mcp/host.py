@@ -29,6 +29,9 @@ class MCPHost:
         # 工具级超时覆盖：None 表示该工具自管理超时（如 wait_for_task），
         # 其余未登记的工具仍使用默认 MCP_TOOL_TIMEOUT。
         self._tool_timeouts: dict[str, float | None] = {}
+        # Server 级工具白名单：{server_name: 允许暴露的工具名集合}，
+        # 未登记的 Server 不做过滤（暴露全部工具）。
+        self._tool_filters: dict[str, set[str]] = {}
 
     def register_server(self, name: str, server_config: dict) -> None:
         """注册一个 MCP Server 的连接配置。
@@ -90,6 +93,19 @@ class MCPHost:
             return
         tool.description = f"{tool.description} {suffix}"
 
+    def filter_server_tools(self, server_name: str, allowlist: list[str]) -> None:
+        """限制某 Server 只暴露白名单内的工具。
+
+        部分托管 MCP 服务会附带大量与需求无关的平台工具（如 Polygon.io 网关
+        还带 Pipeworx 平台的几十个通用工具），全量暴露会显著增加 LLM 上下文
+        开销并干扰工具选择。通过白名单只保留需要的工具。
+
+        Args:
+            server_name: Server 名称（须与 initialize 中登记名一致）。
+            allowlist: 允许暴露的工具名列表；未列出的工具将被过滤。
+        """
+        self._tool_filters[server_name] = set(allowlist)
+
     async def initialize(self, servers: dict | None = None) -> None:
         """连接所有已注册的 MCP Server 并注册其工具。
 
@@ -122,7 +138,11 @@ class MCPHost:
                         "MCP Server %s 初始化失败，已跳过：%s", name, tools
                     )
                     continue
+                allowlist = self._tool_filters.get(name)
                 for tool in tools:
+                    # Server 级白名单过滤：未在允许名单内的工具不注册
+                    if allowlist is not None and tool.name not in allowlist:
+                        continue
                     if tool.name not in self._tool_registry:
                         self._tool_registry[tool.name] = tool
                         self.tools.append(tool)

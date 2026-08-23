@@ -19,6 +19,9 @@ slowapi
 redis
 httpx
 
+# 飞书机器人接入（长连接模式，官方 channel SDK）
+lark-channel-sdk
+
 # 文件上传与解析（阶段 9）
 pypdf
 python-docx
