@@ -2,6 +2,8 @@
 
 使用 pydantic-settings 从环境变量或 .env 文件加载配置。
 """
+import json
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -146,6 +148,23 @@ class Settings(BaseSettings):
     MODEL_TIMEOUT: int = 45  # 模型单次尝试超时（秒）
     MCP_TOOL_TIMEOUT: int = 30  # MCP 工具调用超时（秒）
     SQL_TIMEOUT: int = 10  # SQL 查询超时（秒）
+
+    # 影刀 RPA 热键触发（本地桌面功能：后端须运行在用户交互桌面会话，影刀客户端须保持运行）
+    # JSON 映射字符串：{"应用名": "热键组合"}，如 {"竞品监控日报系统": "ctrl+shift+alt+c"}
+    YINGDAO_RPA_HOTKEYS: str = ""
+    YINGDAO_RPA_LOG_DIR: str = ""  # 影刀主日志目录；留空则用默认路径 C:/Users/<用户>/AppData/Local/ShadowBot/log
+    YINGDAO_RPA_STATUS_TIMEOUT: int = 300  # 任务状态判定超时阈值（秒），超过仍未启动判定为 TIMEOUT
+
+    @property
+    def rpa_hotkeys(self) -> dict[str, str]:
+        """解析 YINGDAO_RPA_HOTKEYS 为 {应用名: 热键组合} 映射；配置缺失或格式非法时返回空字典。"""
+        if not self.YINGDAO_RPA_HOTKEYS:
+            return {}
+        try:
+            data = json.loads(self.YINGDAO_RPA_HOTKEYS)
+        except json.JSONDecodeError:
+            return {}
+        return data if isinstance(data, dict) else {}
 
     # 日志
     LOG_LEVEL: str = "INFO"
