@@ -33,6 +33,7 @@ from app.services.mcp.server_config import (
     build_deepwiki_server,
     build_document_generator_server,
     build_fetch_server,
+    build_firecrawl_server,
     build_flight_compare_server,
     build_food_server,
     build_leetcode_server,
@@ -90,6 +91,20 @@ async def lifespan(app: FastAPI):
             "exchanges",
         ],
     )
+    # Firecrawl 网关实际暴露 26 个工具，按白名单只保留 6 个核心工具
+    # （scrape 抓取 / search 搜索 / map 站点枚举 / crawl+check 整站爬取 / parse 文档解析），
+    # monitor 监控、research 学术、feedback、agent 异步研究等低频工具不暴露
+    mcp_host.filter_server_tools(
+        "firecrawl",
+        [
+            "firecrawl_scrape",
+            "firecrawl_search",
+            "firecrawl_map",
+            "firecrawl_crawl",
+            "firecrawl_check_crawl_status",
+            "firecrawl_parse",
+        ],
+    )
     await mcp_host.initialize(
         {
             "tavily": build_tavily_server(settings.TAVILY_API_KEY),
@@ -107,6 +122,7 @@ async def lifespan(app: FastAPI):
             "qwen_video": build_qwen_video_server(settings.MODELSCOPE_TOKEN),
             "polygon": build_polygon_server(settings.POLYGON_API_KEY),
             "calculator": build_calculator_server(),
+            "firecrawl": build_firecrawl_server(settings.FIRECRAWL_API_KEY),
         }
     )
     # 视频理解单次调用约 10~20s，单独调大超时（默认 MCP 30s 不够）

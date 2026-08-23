@@ -341,6 +341,37 @@ def build_calculator_server() -> dict:
     }
 
 
+def build_firecrawl_server(api_key: str) -> dict:
+    """构造 Firecrawl MCP Server 的 Streamable HTTP 连接配置。
+
+    Firecrawl 官方托管 MCP 服务。提供 26 个工具（scrape/map/search/crawl/
+    parse/agent/monitor 等），核心能力为网页抓取与检索。
+
+    鉴权（实测确认）：API Key 经 Authorization: Bearer 头传递，**不拼进 URL**
+    （官方文档的 /{key}/v2/mcp 路径形式不安全，会被日志/代理记录）。
+    无密钥也可握手但受速率限制，故 .env 未配置时按无密钥免费层接入。
+
+    注意（实测发现）：
+    - 26 个工具中含大量低频工具（monitor_* 监控、research_* 学术论文、
+      feedback 反馈、agent 异步研究等），已在 main.py 通过
+      mcp_host.filter_server_tools 按白名单只暴露 6 个核心工具。
+    - 单次 scrape 约 0.6s，属同步工具，走默认 MCP_TOOL_TIMEOUT。
+
+    Args:
+        api_key: Firecrawl API Key（fc- 开头）；空则走无密钥免费层。
+
+    Returns:
+        langchain-mcp-adapters 可识别的 streamable_http 连接配置字典。
+    """
+    config: dict = {
+        "transport": "streamable_http",
+        "url": "https://mcp.firecrawl.dev/v2/mcp",
+    }
+    if api_key:
+        config["headers"] = {"Authorization": f"Bearer {api_key}"}
+    return config
+
+
 def build_filesystem_server(allowed_root: str) -> dict:
     """构造本地文件系统 MCP Server 的 stdio 连接配置。
 

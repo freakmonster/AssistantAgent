@@ -138,8 +138,11 @@ class Settings(BaseSettings):
     MODELSCOPE_QWEN_VIDEO_URL: str
 
     # Polygon.io（Pipeworx 网关托管）MCP：平台托管模式无需密钥；
-    # 如需自带密钥，填写后自动在 URL 后追加 ?_apiKey=KEY（免费套餐 5 次/分钟）Massive Key
-    POLYGON_API_KEY: str = "qfdABt2HmqWKHhvwsYZBKLefekn_u12b"
+    # 如需自带密钥，填写后自动在 URL 后追加 ?_apiKey=KEY（免费套餐 5 次/分钟）
+    POLYGON_API_KEY: str = ""
+
+    # Firecrawl 网页抓取/搜索 MCP（经 Authorization: Bearer 头鉴权，不拼 URL）
+    FIRECRAWL_API_KEY: str = ""
 
     # 会话压缩（上下文达到阈值时用「摘要 + 最近窗口」替换早期消息）
     SUMMARIZE_TOKEN_THRESHOLD: int = 700_000  # 触发压缩的 token 阈值（1M 窗口的 70%）
