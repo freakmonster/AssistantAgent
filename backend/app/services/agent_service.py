@@ -121,6 +121,95 @@ class AgentService:
             )
             yield self._sse("done", {"status": "completed"})
 
+    async def stream_agent_text(
+        self,
+        thread_id: str,
+        user_id: str,
+        session_id: str,
+        message: str,
+        attachments: list[str] | None = None,
+        model: str | None = None,
+    ) -> AsyncGenerator[tuple[str, str], None]:
+        """流式执行 Agent，产出纯文本事件（供飞书流式卡片等非 SSE 场景使用）。
+
+        与 stream_agent_response 的区别：不产出 SSE 文本，而是产出结构化元组，
+        便于调用方直接驱动卡片打字机输出。
+
+        Args:
+            thread_id: LangGraph 线程 id（即会话隔离键）。
+            user_id: 当前用户 id（字符串）。
+            session_id: 会话 id（字符串）。
+            message: 用户问题。
+            attachments: 附件 file_id 列表。
+            model: 指定模型 id，None 表示使用默认模型。
+
+        Yields:
+            (事件类型, 内容) 元组：
+            - ("text", 增量文本)：追加到已输出内容末尾；
+            - ("reset", "")：丢弃已输出内容重新开始（check 节点判定答案偏离、
+              即将重新作答，避免被否决的答案残留在界面上）。
+
+        Raises:
+            asyncio.TimeoutError: 主流程超过 MAIN_FLOW_TIMEOUT。
+            Exception: 图执行异常，由调用方决定如何呈现给用户。
+        """
+        config = self._build_config(thread_id, user_id, session_id, model)
+        inputs = {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": await self._resolve_attachments(
+                        user_id, attachments or [], message
+                    ),
+                }
+            ]
+        }
+        # 主流程总超时（阶段 5）：异常/超时直接抛出、不落库，避免写入残缺消息
+        async with asyncio.timeout(settings.MAIN_FLOW_TIMEOUT):
+            async for mode, data in self.agent.astream(
+                inputs,
+                config=config,
+                stream_mode=["messages", "updates"],
+            ):
+                if mode == "messages":
+                    msg, meta = data
+                    node = meta.get("langgraph_node")
+                    # 过滤内部节点（复核提示 / 工具结果）的消息，避免泄漏到正文
+                    if node in ("check", "tools"):
+                        continue
+                    content = getattr(msg, "content", "")
+                    if content:
+                        yield (
+                            "text",
+                            content if isinstance(content, str) else str(content),
+                        )
+                elif self._is_drift_reset(data):
+                    yield ("reset", "")
+
+        # 流正常完整结束后才落库（超时/异常不会走到这里）
+        state = await self.agent.aget_state(config)
+        await self._persist_messages(
+            thread_id,
+            user_id,
+            message,
+            state.values.get("messages", []),
+            attachments or [],
+        )
+
+    @staticmethod
+    def _is_drift_reset(update_data: Any) -> bool:
+        """判断 updates 事件是否为 check 节点判定答案偏离（即将重新作答）。
+
+        check_node 判定偏离时会写入 drifted=True 并注入复核提醒让 agent 重答；
+        此时此前流式输出的答案已被否决，调用方应清空已展示内容。
+        """
+        if not isinstance(update_data, dict):
+            return False
+        check_output = update_data.get("check")
+        if not isinstance(check_output, dict):
+            return False
+        return bool(check_output.get("drifted"))
+
     async def _resolve_attachments(
         self, user_id: str, attachments: list[str], message: str
     ) -> str:
